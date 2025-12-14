@@ -51,7 +51,7 @@ interface TokenRowProps {
 }
 
 function TokenRow({ token, onClick }: TokenRowProps) {
-    const balance = formatBalance(token.balance.toString(), token.decimals);
+    // TokenBalance has: token (TokenInfo), balance (bigint), formatted (string), usdValue (number?)
     const usdValue = token.usdValue ? formatUsdValue(token.usdValue) : null;
 
     return (
@@ -61,15 +61,15 @@ function TokenRow({ token, onClick }: TokenRowProps) {
         >
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-lg">
-                    {getTokenIcon(token.symbol)}
+                    {getTokenIcon(token.token.symbol)}
                 </div>
                 <div className="text-left">
-                    <p className="text-white font-medium">{token.symbol}</p>
-                    <p className="text-gray-400 text-sm">{token.name || token.symbol}</p>
+                    <p className="text-white font-medium">{token.token.symbol}</p>
+                    <p className="text-gray-400 text-sm">{token.token.name || token.token.symbol}</p>
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-white font-medium">{balance}</p>
+                <p className="text-white font-medium">{token.formatted}</p>
                 {usdValue && (
                     <p className="text-gray-400 text-sm">{usdValue}</p>
                 )}
@@ -91,8 +91,8 @@ export function BalanceCard({ balances, isLoading, onRefresh, chainName }: Balan
     const totalValue = balances?.tokens.reduce((sum, t) => sum + (t.usdValue || 0), 0) || 0;
 
     // Filter to show tokens with balance
-    const tokensWithBalance = balances?.tokens.filter(t => BigInt(t.balance) > 0n) || [];
-    const zeroBalanceTokens = balances?.tokens.filter(t => BigInt(t.balance) === 0n) || [];
+    const tokensWithBalance = balances?.tokens.filter(t => t.balance > BigInt(0)) || [];
+    const zeroBalanceTokens = balances?.tokens.filter(t => t.balance === BigInt(0)) || [];
 
     return (
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
@@ -166,7 +166,7 @@ export function BalanceCard({ balances, isLoading, onRefresh, chainName }: Balan
                         ) : (
                             <div className="py-2">
                                 {tokensWithBalance.map((token) => (
-                                    <TokenRow key={token.address} token={token} />
+                                    <TokenRow key={token.token.address} token={token} />
                                 ))}
                             </div>
                         )}
@@ -186,7 +186,7 @@ export function BalanceCard({ balances, isLoading, onRefresh, chainName }: Balan
                         </summary>
                         <div className="mt-2 py-2">
                             {zeroBalanceTokens.map((token) => (
-                                <TokenRow key={token.address} token={token} />
+                                <TokenRow key={token.token.address} token={token} />
                             ))}
                         </div>
                     </details>

@@ -19,6 +19,8 @@ import {
     BridgeResult,
     CrossChainProgress,
     CrossChainResult,
+    MultiChainVaultResult,
+    SponsoredVaultResult,
 } from '@veridex/sdk';
 import { EVMClient } from '@veridex/sdk/chains/evm';
 import { ethers } from 'ethers';
@@ -47,6 +49,12 @@ interface VeridexContextType {
     createVault: () => Promise<VaultCreationResult>;
     refreshIdentity: () => Promise<void>;
     
+    // Sponsored Vault Creation (Gasless)
+    createSponsoredVaults: () => Promise<MultiChainVaultResult>;
+    isSponsorshipAvailable: () => boolean;
+    sponsoredVaultStatus: MultiChainVaultResult | null;
+    isCreatingSponsoredVaults: boolean;
+    
     // Phase 2: Balances
     vaultBalances: PortfolioBalance | null;
     isLoadingBalances: boolean;
@@ -58,6 +66,8 @@ interface VeridexContextType {
     prepareTransfer: (params: TransferParams) => Promise<PreparedTransfer>;
     executeTransfer: (prepared: PreparedTransfer) => Promise<TransferResult>;
     transfer: (params: TransferParams) => Promise<TransferResult>;
+    /** Gasless transfer - uses relayer to pay gas fees */
+    transferGasless: (params: TransferParams) => Promise<TransferResult>;
     
     // Phase 2: Receive
     receiveAddress: ReceiveAddress | null;
@@ -97,6 +107,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [pendingBridges, setPendingBridges] = useState<CrossChainResult[]>([]);
     const [bridgeProgress, setBridgeProgress] = useState<CrossChainProgress | null>(null);
 
+    // Sponsored vault creation state
+    const [sponsoredVaultStatus, setSponsoredVaultStatus] = useState<MultiChainVaultResult | null>(null);
+    const [isCreatingSponsoredVaults, setIsCreatingSponsoredVaults] = useState<boolean>(false);
+
     // Initialize SDK on mount
     useEffect(() => {
         const initSdk = async () => {
@@ -120,6 +134,19 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     chain: evmClient,
                     persistWallet: true,
                     testnet: true,
+                    // Relayer for remote sponsorship (future primary method)
+                    relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL,
+                    relayerApiKey: process.env.NEXT_PUBLIC_RELAYER_API_KEY,
+                    // Integrator sponsor key (takes priority over Veridex default)
+                    integratorSponsorKey: process.env.NEXT_PUBLIC_INTEGRATOR_SPONSOR_KEY,
+                    // Veridex sponsor key (fallback when relayer not available)
+                    sponsorPrivateKey: process.env.NEXT_PUBLIC_VERIDEX_SPONSOR_KEY,
+                    // RPC URLs for multi-chain sponsorship
+                    chainRpcUrls: {
+                        10004: config.rpcUrl, // Base Sepolia (hub)
+                        10005: spokeConfigs.optimismSepolia.rpcUrl, // Optimism Sepolia
+                        10003: spokeConfigs.arbitrumSepolia.rpcUrl, // Arbitrum Sepolia
+                    },
                 });
 
                 setSdk(veridexSdk);
@@ -132,6 +159,26 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     
                     // Load unified identity (includes vault address)
                     await loadIdentity(veridexSdk);
+
+                    // Auto-create vaults on chains where they don't exist (sponsored)
+                    // This ensures returning users have vaults on all chains
+                    if (veridexSdk.isSponsorshipAvailable()) {
+                        console.log('Checking vaults on all chains for returning user...');
+                        setIsCreatingSponsoredVaults(true);
+                        try {
+                            const vaultResult = await veridexSdk.ensureSponsoredVaultsOnAllChains();
+                            const newlyCreated = vaultResult.results.filter(r => r.success && !r.alreadyExists);
+                            if (newlyCreated.length > 0) {
+                                console.log('Created vaults on:', newlyCreated.map(r => r.chain).join(', '));
+                                setSponsoredVaultStatus(vaultResult);
+                                await loadIdentity(veridexSdk);
+                            }
+                        } catch (vaultError) {
+                            console.warn('Auto vault creation failed:', vaultError);
+                        } finally {
+                            setIsCreatingSponsoredVaults(false);
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('SDK initialization error:', error);
@@ -266,6 +313,31 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    /**
+     * Execute a gasless transfer using the relayer
+     * 
+     * This method allows users to send funds without paying gas themselves.
+     * The relayer service pays the gas fees on behalf of the user.
+     * Users only need to authenticate with their passkey.
+     */
+    const transferGasless = async (params: TransferParams): Promise<TransferResult> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        
+        setIsLoading(true);
+        try {
+            const result = await sdk.transferViaRelayer(params, (state) => {
+                updatePendingTransactions();
+            });
+            
+            // Refresh balances after transfer
+            await refreshBalances();
+            
+            return result;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const updatePendingTransactions = () => {
         if (!sdk) return;
         const pending = sdk.transactions.getPending();
@@ -355,6 +427,38 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         setPendingBridges(pending);
     };
 
+    // ========================================================================
+    // Sponsored Vault Creation (Gasless)
+    // ========================================================================
+
+    const isSponsorshipAvailable = (): boolean => {
+        if (!sdk) return false;
+        return sdk.isSponsorshipAvailable();
+    };
+
+    const createSponsoredVaults = async (): Promise<MultiChainVaultResult> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        if (!credential) throw new Error('Not registered');
+
+        setIsCreatingSponsoredVaults(true);
+        try {
+            // Use ensureSponsoredVaultsOnAllChains to create vaults only where needed
+            // The SDK uses the internal credential's keyHash
+            const result = await sdk.ensureSponsoredVaultsOnAllChains();
+            setSponsoredVaultStatus(result);
+
+            // Refresh identity to update vault deployment status
+            await loadIdentity(sdk);
+
+            return result;
+        } catch (error) {
+            console.error('Sponsored vault creation error:', error);
+            throw error;
+        } finally {
+            setIsCreatingSponsoredVaults(false);
+        }
+    };
+
     const refreshIdentity = async () => {
         if (!sdk) return;
         setIsLoading(true);
@@ -377,6 +481,27 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
             // Load identity which includes deterministic vault address
             await loadIdentity(sdk);
+
+            // Automatically create vaults on all chains using gas sponsorship
+            // This makes the experience truly gasless for the user
+            if (sdk.isSponsorshipAvailable()) {
+                console.log('Auto-creating vaults on all chains (sponsored)...');
+                setIsCreatingSponsoredVaults(true);
+                try {
+                    // SDK uses the internal credential's keyHash
+                    const vaultResult = await sdk.ensureSponsoredVaultsOnAllChains();
+                    setSponsoredVaultStatus(vaultResult);
+                    console.log('Sponsored vaults created:', vaultResult);
+                    
+                    // Refresh identity to update vault deployment status
+                    await loadIdentity(sdk);
+                } catch (vaultError) {
+                    console.warn('Auto vault creation failed (can be retried manually):', vaultError);
+                    // Don't throw - registration was successful, vault creation is optional
+                } finally {
+                    setIsCreatingSponsoredVaults(false);
+                }
+            }
         } catch (error) {
             console.error('Registration error:', error);
             throw error;
@@ -402,6 +527,32 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             
             // Load identity
             await loadIdentity(sdk);
+
+            // Auto-create vaults on chains where they don't exist (sponsored)
+            if (sdk.isSponsorshipAvailable()) {
+                console.log('Checking vaults on all chains...');
+                setIsCreatingSponsoredVaults(true);
+                try {
+                    // ensureSponsoredVaultsOnAllChains only creates vaults where they don't exist
+                    const vaultResult = await sdk.ensureSponsoredVaultsOnAllChains();
+                    
+                    // Only show status if any vaults were created (not just already existing)
+                    const newlyCreated = vaultResult.results.filter(r => r.success && !r.alreadyExists);
+                    if (newlyCreated.length > 0) {
+                        console.log('Created vaults on:', newlyCreated.map(r => r.chain).join(', '));
+                        setSponsoredVaultStatus(vaultResult);
+                        // Refresh identity to update vault deployment status
+                        await loadIdentity(sdk);
+                    } else {
+                        console.log('All vaults already exist');
+                    }
+                } catch (vaultError) {
+                    console.warn('Vault check/creation failed (can be retried manually):', vaultError);
+                    // Don't throw - login was successful, vault creation is optional
+                } finally {
+                    setIsCreatingSponsoredVaults(false);
+                }
+            }
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -561,6 +712,12 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 createVault,
                 refreshIdentity,
                 
+                // Sponsored Vault Creation (Gasless)
+                createSponsoredVaults,
+                isSponsorshipAvailable,
+                sponsoredVaultStatus,
+                isCreatingSponsoredVaults,
+                
                 // Phase 2: Balances
                 vaultBalances,
                 isLoadingBalances,
@@ -572,6 +729,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 prepareTransfer,
                 executeTransfer,
                 transfer,
+                transferGasless,
                 
                 // Phase 2: Receive
                 receiveAddress,

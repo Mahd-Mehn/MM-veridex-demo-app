@@ -11,16 +11,22 @@ const CHAIN_OPTIONS = [
     { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB' },
 ];
 
+interface TransferParams {
+    targetChain: number;
+    token: string;
+    recipient: string;
+    amount: bigint;
+}
+
 interface SendFormProps {
     tokens: TokenInfo[];
     currentChainId: number;
-    onPrepare: (params: {
-        targetChain: number;
-        token: string;
-        recipient: string;
-        amount: bigint;
-    }) => Promise<PreparedTransfer>;
-    onSend: (prepared: PreparedTransfer) => Promise<{ transactionHash: string; sequence: bigint }>;
+    /** Gasless transfer - user only needs passkey, no wallet required */
+    onSendGasless?: (params: TransferParams) => Promise<{ transactionHash: string; sequence: bigint }>;
+    /** Legacy: Prepare transfer (requires wallet) */
+    onPrepare?: (params: TransferParams) => Promise<PreparedTransfer>;
+    /** Legacy: Execute prepared transfer (requires wallet) */
+    onSend?: (prepared: PreparedTransfer) => Promise<{ transactionHash: string; sequence: bigint }>;
     isLoading: boolean;
     vaultAddress: string;
 }
@@ -28,11 +34,15 @@ interface SendFormProps {
 export function SendForm({
     tokens,
     currentChainId,
+    onSendGasless,
     onPrepare,
     onSend,
     isLoading,
     vaultAddress,
 }: SendFormProps) {
+    // Use gasless flow if available
+    const isGasless = !!onSendGasless;
+    
     const [step, setStep] = useState<'form' | 'confirm' | 'sending' | 'success'>('form');
     const [recipient, setRecipient] = useState('');
     const [amount, setAmount] = useState('');
@@ -68,30 +78,59 @@ export function SendForm({
 
         try {
             const amountBigInt = ethers.parseUnits(amount, tokenInfo.decimals);
-            const prep = await onPrepare({
-                targetChain,
-                token: selectedToken,
-                recipient,
-                amount: amountBigInt,
-            });
-            setPrepared(prep);
-            setStep('confirm');
+            
+            // If gasless, skip prepare step and go straight to confirm
+            if (isGasless) {
+                // Store params for gasless send
+                setPrepared({
+                    params: {
+                        targetChain,
+                        token: selectedToken,
+                        recipient,
+                        amount: amountBigInt,
+                    },
+                } as any);
+                setStep('confirm');
+                return;
+            }
+            
+            // Legacy flow: prepare transfer
+            if (onPrepare) {
+                const prep = await onPrepare({
+                    targetChain,
+                    token: selectedToken,
+                    recipient,
+                    amount: amountBigInt,
+                });
+                setPrepared(prep);
+                setStep('confirm');
+            }
         } catch (err: any) {
             setError(err.message || 'Failed to prepare transfer');
         }
     };
 
     const handleSend = async () => {
-        if (!prepared) return;
-
         setStep('sending');
         setError('');
 
         try {
-            const result = await onSend(prepared);
-            setTxHash(result.transactionHash);
-            setSequence(result.sequence);
-            setStep('success');
+            // Gasless flow: use onSendGasless directly with params
+            if (isGasless && onSendGasless && prepared?.params) {
+                const result = await onSendGasless(prepared.params);
+                setTxHash(result.transactionHash);
+                setSequence(result.sequence);
+                setStep('success');
+                return;
+            }
+            
+            // Legacy flow: use onSend with prepared transfer
+            if (onSend && prepared) {
+                const result = await onSend(prepared);
+                setTxHash(result.transactionHash);
+                setSequence(result.sequence);
+                setStep('success');
+            }
         } catch (err: any) {
             setError(err.message || 'Transfer failed');
             setStep('confirm');
