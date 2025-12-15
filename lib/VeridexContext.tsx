@@ -124,10 +124,9 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     wormholeCoreBridge: config.wormholeCoreBridge,
                     name: config.chainName,
                     explorerUrl: config.explorerUrl,
-                    // Use Optimism Sepolia factory for vault address computation
-                    // (Hub chain doesn't have vaults, spokes do)
-                    vaultFactory: spokeConfigs.optimismSepolia.vaultFactory,
-                    vaultImplementation: spokeConfigs.optimismSepolia.vaultImplementation,
+                    // Use Base Sepolia factory for vault address computation and creation
+                    vaultFactory: config.vaultFactory,
+                    vaultImplementation: config.vaultImplementation,
                 });
 
                 const veridexSdk = new VeridexSDK({

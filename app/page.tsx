@@ -561,7 +561,11 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <p className="text-gray-400">No recent activity</p>
+                <p className="text-gray-400 mb-2">No pending transactions</p>
+                <p className="text-gray-500 text-sm max-w-xs mx-auto">
+                  Outgoing transactions you initiate will appear here. 
+                  Incoming deposits are reflected in your balance.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
