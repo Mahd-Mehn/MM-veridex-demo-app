@@ -326,14 +326,19 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         
         setIsLoading(true);
         try {
+            console.log('[Veridex] Starting gasless transfer:', params);
             const result = await sdk.transferViaRelayer(params, (state) => {
                 updatePendingTransactions();
             });
+            console.log('[Veridex] Gasless transfer successful:', result);
             
             // Refresh balances after transfer
             await refreshBalances();
             
             return result;
+        } catch (err: any) {
+            console.error('[Veridex] Gasless transfer failed:', err?.message || err);
+            throw err;
         } finally {
             setIsLoading(false);
         }

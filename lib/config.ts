@@ -1,10 +1,17 @@
 // Veridex SDK Configuration
 
+// RPC URLs from environment variables (fallback to public endpoints)
+const RPC_URLS = {
+    baseSepolia: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
+    optimismSepolia: process.env.NEXT_PUBLIC_OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
+    arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+};
+
 // Base Sepolia (Hub Chain) - Now also has factory for vault creation
 export const config = {
     chainId: 84532,
     wormholeChainId: 10004,
-    rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/tsOnfTBZDKMXcUA26OED-',
+    rpcUrl: RPC_URLS.baseSepolia,
     hubContract: '0xf189b649ecb44708165f36619ED24ff917eF1f94',
     wormholeCoreBridge: '0x79A1027a6A159502049F10906D333EC57E95F083',
     wormholeTokenBridge: '0x86F55A04690fd7815A3D802bD587e83eA888B239',
@@ -13,14 +20,14 @@ export const config = {
     // Factory deployed on Base Sepolia for local vault creation
     vaultFactory: '0x0E4B53AbCE029Df2a1e0068F16C5A35A6a8D85b6',
     vaultImplementation: '0x755F4d7191fC8A3e832E9f8b30c7ab6543F943f3',
-} as const;
+};
 
 // Spoke Chain Configurations
 export const spokeConfigs = {
     optimismSepolia: {
         chainId: 11155420,
         wormholeChainId: 10005,
-        rpcUrl: 'https://sepolia.optimism.io',
+        rpcUrl: RPC_URLS.optimismSepolia,
         wormholeCoreBridge: '0x31377888146f3253211EFEf5c676D41ECe7D58Fe',
         wormholeTokenBridge: '0x99737Ec4B815d816c49A385943baf0380e75c0Ac',
         chainName: 'Optimism Sepolia',
@@ -31,7 +38,7 @@ export const spokeConfigs = {
     arbitrumSepolia: {
         chainId: 421614,
         wormholeChainId: 10003,
-        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        rpcUrl: RPC_URLS.arbitrumSepolia,
         wormholeCoreBridge: '0x6b9C8671cdDC8dEab9c719bB87cBd3e782bA6a35',
         wormholeTokenBridge: '0xC7A204bDBFe983FCD8d8E61D02b475D4073fF97e',
         chainName: 'Arbitrum Sepolia',
@@ -39,7 +46,7 @@ export const spokeConfigs = {
         vaultFactory: '0xbE9B9c39956448DA75Ac97E5e3dE17e34171660A',
         vaultImplementation: '0x500853DCc54Fd1A707ec9d443032Bb7748f426d3',
     },
-} as const;
+};
 
 // List of all supported chains with their vault configurations
 export const supportedChains = {
