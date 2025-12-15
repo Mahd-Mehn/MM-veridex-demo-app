@@ -1,17 +1,18 @@
 // Veridex SDK Configuration
 
-// Base Sepolia (Hub Chain)
+// Base Sepolia (Hub Chain) - Now also has factory for vault creation
 export const config = {
     chainId: 84532,
     wormholeChainId: 10004,
     rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/tsOnfTBZDKMXcUA26OED-',
     hubContract: '0xf189b649ecb44708165f36619ED24ff917eF1f94',
     wormholeCoreBridge: '0x79A1027a6A159502049F10906D333EC57E95F083',
+    wormholeTokenBridge: '0x86F55A04690fd7815A3D802bD587e83eA888B239',
     chainName: 'Base Sepolia',
     explorerUrl: 'https://sepolia.basescan.org',
-    // Note: Base Sepolia is hub-only, no factory on hub chain
-    vaultFactory: undefined,
-    vaultImplementation: undefined,
+    // Factory deployed on Base Sepolia for local vault creation
+    vaultFactory: '0x0E4B53AbCE029Df2a1e0068F16C5A35A6a8D85b6',
+    vaultImplementation: '0x755F4d7191fC8A3e832E9f8b30c7ab6543F943f3',
 } as const;
 
 // Spoke Chain Configurations
