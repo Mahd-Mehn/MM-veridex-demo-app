@@ -1,20 +1,21 @@
 # Veridex SDK Test Application
 
-A comprehensive Next.js test application for the Veridex Protocol SDK, featuring passkey-based cross-chain authentication and token transfers.
+A comprehensive Next.js 15 test application for the Veridex Protocol SDK, featuring passkey-based cross-chain authentication, gasless token transfers, and multi-chain vault management.
 
 ## 🚀 Features
 
 - **Passkey Registration & Login**: Test WebAuthn passkey creation and authentication
-- **Wallet Connection**: Connect MetaMask to Base Sepolia testnet
-- **Vault Management**: Create and manage cross-chain vaults
+- **Gasless Transfers**: Send tokens without paying gas - relayer covers all fees
+- **Wormhole Queries**: Fetch Guardian-attested balances across all chains
+- **Multi-Chain Vaults**: Automatic sponsored vault creation on all supported chains
 - **Cross-Chain Transfers**: Execute token transfers across different chains using passkeys
 - **Beautiful UI**: Modern glassmorphic design with real-time status indicators
 
 ## 📋 Prerequisites
 
 - Node.js 18+ installed
-- MetaMask browser extension
-- Base Sepolia testnet ETH (for gas fees)
+- MetaMask browser extension (optional - only needed for gas-paying flows)
+- Base Sepolia testnet ETH (optional - gasless transfers don't require user ETH)
 - A WebAuthn-compatible device (most modern browsers support this)
 
 ## 🛠️ Setup
@@ -24,22 +25,39 @@ A comprehensive Next.js test application for the Veridex Protocol SDK, featuring
    npm install
    ```
 
-2. **Configuration**
-   The app is pre-configured to use Base Sepolia testnet with the following settings:
-   - Chain ID: 84532 (Base Sepolia)
-   - Wormhole Chain ID: 10004
-   - RPC URL: Alchemy endpoint
-   - Hub Contract: `0xf189b649ecb44708165f36619ED24ff917eF1f94`
-   - Wormhole Core Bridge: `0x79A1027a6A159502049F10906D333EC57E95F083`
-
-   You can modify these in `lib/config.ts` if needed.
-
-3. **Run Development Server**
+2. **Environment Variables**
+   
+   Create `.env.local` from the example:
    ```bash
+   cp .env.local.example .env.local
+   ```
+
+   Configure the following:
+   ```env
+   # Required: Relayer URL (run locally or use hosted)
+   NEXT_PUBLIC_RELAYER_URL=http://localhost:3001
+   
+   # Optional: Wormhole Query API key (for Guardian-attested balances)
+   NEXT_PUBLIC_WORMHOLE_QUERY_API_KEY=your-api-key-here
+   
+   # Optional: Sponsor key for gasless vault creation
+   NEXT_PUBLIC_VERIDEX_SPONSOR_KEY=0x...
+   ```
+
+3. **Start the Relayer** (in separate terminal)
+   ```bash
+   cd ../packages/relayer
    npm run dev
    ```
 
-4. **Open Browser**
+4. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
+   
+   > **Note:** Uses `--webpack` flag for compatibility with local SDK symlinks.
+
+5. **Open Browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## 🧪 Testing Flow
@@ -52,28 +70,43 @@ A comprehensive Next.js test application for the Veridex Protocol SDK, featuring
 - Follow your browser's WebAuthn prompt to create a passkey
 - Your credential will be saved to localStorage
 
-### 2. Connect Wallet
+### 2. Connect Wallet (Optional)
 
+For gasless transfers, wallet connection is **not required**. The relayer pays all gas fees.
+
+For legacy gas-paying flows:
 - Click "Connect MetaMask"
 - Approve the connection in MetaMask
-- The app will automatically switch to Base Sepolia (or prompt you to add the network)
+- The app will automatically switch to Base Sepolia
 - Ensure you have some testnet ETH for gas fees
 
-### 3. Create a Vault
+### 3. Create Vaults (Automatic)
 
-- Once both passkey and wallet are connected, click "Create Vault"
+With sponsored vault creation enabled:
+- Vaults are automatically created on all supported chains
+- The sponsor wallet pays for deployment gas
+- No user interaction required
+
+For manual vault creation:
+- Connect your wallet first
+- Click "Create Vault"
 - Approve the transaction in MetaMask
-- Your vault address will be displayed once created
 
-### 4. Test Cross-Chain Transfer
+### 4. Test Gasless Transfer
 
-- Select a target chain (Optimism Sepolia, Arbitrum Sepolia, or Base Sepolia)
-- Enter a token address (e.g., USDC contract address)
+The app uses **gasless transfers by default**:
+- Select a target chain (Optimism Sepolia, Arbitrum Sepolia)
 - Enter a recipient address
 - Enter the amount to transfer
-- Click "Transfer Tokens"
+- Click "Send" 
 - Authenticate with your passkey when prompted
-- Approve the transaction in MetaMask
+- **No wallet approval needed** - relayer pays the gas!
+
+The transfer flow:
+1. SDK fetches nonce from relayer
+2. You sign with your passkey
+3. Relayer submits to Hub chain (paying gas)
+4. Relayer automatically relays VAA to destination chain
 
 ## 🔑 Passkey Authentication
 
@@ -90,46 +123,71 @@ Credentials are stored in localStorage and include:
 
 ## 🌐 Supported Chains
 
-The test app is configured for Base Sepolia as the hub chain, with support for cross-chain transfers to:
+The test app is configured for Base Sepolia as the hub chain:
 
-- **Base Sepolia** (Wormhole Chain ID: 10004)
-- **Optimism Sepolia** (Wormhole Chain ID: 10005)
-- **Arbitrum Sepolia** (Wormhole Chain ID: 10003)
+| Chain | Wormhole ID | Type | Role |
+|-------|-------------|------|------|
+| Base Sepolia | 10004 | EVM | Hub |
+| Optimism Sepolia | 10005 | EVM | Spoke |
+| Arbitrum Sepolia | 10003 | EVM | Spoke |
+| Solana Devnet | 1 | Solana | Spoke |
+| Aptos Testnet | 22 | Aptos | Spoke |
 
 ## 📦 SDK Usage Example
 
 ```typescript
-import { VeridexSDK } from '@veridex/sdk';
-import { EVMClient } from '@veridex/sdk/chains/evm';
+import { VeridexSDK, EVMClient } from '@veridex/sdk';
 import { ethers } from 'ethers';
 
-// Initialize SDK
+// Initialize SDK with relayer (for gasless)
+const provider = new ethers.JsonRpcProvider('https://sepolia.base.org');
 const evmClient = new EVMClient({
-  chainId: 84532,
-  wormholeChainId: 10004,
-  rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/YOUR_KEY',
-  hubContractAddress: '0xf189b649ecb44708165f36619ED24ff917eF1f94',
-  wormholeCoreBridge: '0x79A1027a6A159502049F10906D333EC57E95F083',
+  provider,
+  testnet: true,
+  hubAddress: '0xf189b649ecb44708165f36619ED24ff917eF1f94',
 });
 
-const sdk = new VeridexSDK({ chain: evmClient });
+const sdk = new VeridexSDK({
+  chain: evmClient,
+  testnet: true,
+  relayerUrl: 'http://localhost:3001',
+  queryApiKey: process.env.WORMHOLE_QUERY_API_KEY,
+});
 
 // Register passkey
 const credential = await sdk.passkey.register('alice', 'Alice');
 
-// Connect wallet
-const provider = new ethers.BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
+// Get vault address (derived from keyHash)
+const vaultAddress = await sdk.getVaultAddress();
 
-// Create vault
-const vaultAddress = await sdk.createVault(signer);
-
-// Transfer tokens
-const result = await sdk.transfer({
+// Gasless transfer - no wallet needed!
+const result = await sdk.transferViaRelayer({
   targetChain: 10005, // Optimism Sepolia
-  token: '0x...', // Token address
-  recipient: '0x...', // Recipient address
-  amount: ethers.parseUnits('100', 6), // Amount
+  token: 'native',
+  recipient: '0x...',
+  amount: ethers.parseEther('0.01'),
+});
+
+console.log('TX:', result.transactionHash);
+```
+
+## 🏗️ Project Structure
+
+```
+test-app/
+├── app/
+│   ├── globals.css      # Tailwind + glassmorphic styles
+│   ├── layout.tsx       # Root layout with VeridexProvider
+│   └── page.tsx         # Main wallet/send UI
+├── components/
+│   ├── BalanceDisplay.tsx   # Multi-chain balance cards
+│   ├── ChainSelector.tsx    # Chain tab navigation
+│   ├── QRCode.tsx           # Receive QR code modal
+│   └── SendForm.tsx         # Transfer form (gasless + legacy)
+├── lib/
+│   ├── config.ts            # Chain configurations
+│   └── VeridexContext.tsx   # React context with SDK
+└── .env.local               # Environment variables
 }, signer);
 ```
 
