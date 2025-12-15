@@ -137,6 +137,8 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     // Relayer for remote sponsorship (future primary method)
                     relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL,
                     relayerApiKey: process.env.NEXT_PUBLIC_RELAYER_API_KEY,
+                    // Wormhole Query Proxy API key (rate limit: 6 queries/sec)
+                    queryApiKey: process.env.NEXT_PUBLIC_WORMHOLE_QUERY_API_KEY,
                     // Integrator sponsor key (takes priority over Veridex default)
                     integratorSponsorKey: process.env.NEXT_PUBLIC_INTEGRATOR_SPONSOR_KEY,
                     // Veridex sponsor key (fallback when relayer not available)
