@@ -485,6 +485,11 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             setCredential(cred);
             sdk.passkey.saveToLocalStorage();
 
+            // Save to relayer for cross-device recovery (fire and forget)
+            sdk.passkey.saveCredentialToRelayer().catch(err => {
+                console.warn('Failed to save credential to relayer (cross-device recovery may not work):', err);
+            });
+
             // Load identity which includes deterministic vault address
             await loadIdentity(sdk);
 
