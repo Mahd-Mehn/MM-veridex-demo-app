@@ -23,8 +23,16 @@ import {
     SponsoredVaultResult,
 } from '@veridex/sdk';
 import { EVMClient } from '@veridex/sdk/chains/evm';
+import { SolanaClient } from '@veridex/sdk/chains/solana';
 import { ethers } from 'ethers';
-import { config, spokeConfigs } from '@/lib/config';
+import { config, spokeConfigs, solanaConfig } from '@/lib/config';
+
+// Solana balance type
+export interface SolanaBalance {
+    address: string;
+    lamports: bigint;
+    sol: number;
+}
 
 interface VeridexContextType {
     sdk: VeridexSDK | null;
@@ -83,6 +91,14 @@ interface VeridexContextType {
     bridgeWithTracking: (params: BridgeParams, onProgress?: (progress: CrossChainProgress) => void) => Promise<BridgeResult>;
     pendingBridges: CrossChainResult[];
     bridgeProgress: CrossChainProgress | null;
+
+    // Solana Integration
+    solanaClient: SolanaClient | null;
+    solanaVaultAddress: string | null;
+    solanaBalance: SolanaBalance | null;
+    isLoadingSolanaBalance: boolean;
+    refreshSolanaBalance: () => Promise<void>;
+    getSolanaReceiveAddress: () => string | null;
 }
 
 const VeridexContext = createContext<VeridexContextType | undefined>(undefined);
@@ -110,6 +126,12 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     // Sponsored vault creation state
     const [sponsoredVaultStatus, setSponsoredVaultStatus] = useState<MultiChainVaultResult | null>(null);
     const [isCreatingSponsoredVaults, setIsCreatingSponsoredVaults] = useState<boolean>(false);
+
+    // Solana state
+    const [solanaClient, setSolanaClient] = useState<SolanaClient | null>(null);
+    const [solanaVaultAddress, setSolanaVaultAddress] = useState<string | null>(null);
+    const [solanaBalance, setSolanaBalance] = useState<SolanaBalance | null>(null);
+    const [isLoadingSolanaBalance, setIsLoadingSolanaBalance] = useState<boolean>(false);
 
     // Initialize SDK on mount
     useEffect(() => {
@@ -147,8 +169,21 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                         10004: config.rpcUrl, // Base Sepolia (hub)
                         10005: spokeConfigs.optimismSepolia.rpcUrl, // Optimism Sepolia
                         10003: spokeConfigs.arbitrumSepolia.rpcUrl, // Arbitrum Sepolia
+                        1: solanaConfig.rpcUrl, // Solana Devnet
                     },
                 });
+
+                // Initialize Solana client
+                const solClient = new SolanaClient({
+                    wormholeChainId: solanaConfig.wormholeChainId,
+                    rpcUrl: solanaConfig.rpcUrl,
+                    programId: solanaConfig.programId,
+                    wormholeCoreBridge: solanaConfig.wormholeCoreBridge,
+                    tokenBridge: solanaConfig.wormholeTokenBridge,
+                    network: solanaConfig.network,
+                    commitment: solanaConfig.commitment,
+                });
+                setSolanaClient(solClient);
 
                 setSdk(veridexSdk);
 
@@ -159,7 +194,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     setCredential(savedCred);
                     
                     // Load unified identity (includes vault address)
-                    await loadIdentity(veridexSdk);
+                    await loadIdentity(veridexSdk, solClient);
 
                     // Auto-create vaults on chains where they don't exist (sponsored)
                     // This ensures returning users have vaults on all chains
@@ -172,7 +207,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                             if (newlyCreated.length > 0) {
                                 console.log('Created vaults on:', newlyCreated.map(r => r.chain).join(', '));
                                 setSponsoredVaultStatus(vaultResult);
-                                await loadIdentity(veridexSdk);
+                                await loadIdentity(veridexSdk, solClient);
                             }
                         } catch (vaultError) {
                             console.warn('Auto vault creation failed:', vaultError);
@@ -191,7 +226,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         initSdk();
     }, []);
 
-    const loadIdentity = async (sdkInstance: VeridexSDK) => {
+    const loadIdentity = async (sdkInstance: VeridexSDK, solClient?: SolanaClient | null) => {
         try {
             const unifiedIdentity = await sdkInstance.getUnifiedIdentity();
             setIdentity(unifiedIdentity);
@@ -223,6 +258,18 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 setReceiveAddress(recvAddr);
             } catch {
                 console.warn('Could not get receive address');
+            }
+
+            // Compute Solana vault address using keyHash
+            const clientToUse = solClient || solanaClient;
+            if (clientToUse && unifiedIdentity.keyHash) {
+                try {
+                    const solVaultAddr = clientToUse.computeVaultAddress(unifiedIdentity.keyHash);
+                    setSolanaVaultAddress(solVaultAddr);
+                    console.log('Solana vault address:', solVaultAddr);
+                } catch (solError) {
+                    console.warn('Could not compute Solana vault address:', solError);
+                }
             }
         } catch (error) {
             console.warn('Could not load identity:', error);
@@ -265,6 +312,54 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         if (!sdk) return [];
         return sdk.getTokenList();
     };
+
+    // ========================================================================
+    // Solana Balance Methods
+    // ========================================================================
+
+    const refreshSolanaBalance = async () => {
+        if (!solanaClient || !solanaVaultAddress) return;
+
+        setIsLoadingSolanaBalance(true);
+        try {
+            // Use the Solana client's connection to fetch the balance
+            const response = await fetch(solanaConfig.rpcUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'getBalance',
+                    params: [solanaVaultAddress],
+                }),
+            });
+
+            const data = await response.json();
+            if (data.result && typeof data.result.value === 'number') {
+                const lamports = BigInt(data.result.value);
+                setSolanaBalance({
+                    address: solanaVaultAddress,
+                    lamports,
+                    sol: Number(lamports) / 1_000_000_000,
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching Solana balance:', error);
+        } finally {
+            setIsLoadingSolanaBalance(false);
+        }
+    };
+
+    const getSolanaReceiveAddress = (): string | null => {
+        return solanaVaultAddress;
+    };
+
+    // Auto-refresh Solana balance when vault address changes
+    useEffect(() => {
+        if (solanaVaultAddress) {
+            refreshSolanaBalance();
+        }
+    }, [solanaVaultAddress]);
 
     // ========================================================================
     // Phase 2: Transfer Methods
@@ -756,6 +851,14 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 bridgeWithTracking,
                 pendingBridges,
                 bridgeProgress,
+
+                // Solana
+                solanaClient,
+                solanaVaultAddress,
+                solanaBalance,
+                isLoadingSolanaBalance,
+                refreshSolanaBalance,
+                getSolanaReceiveAddress,
             }}
         >
             {children}

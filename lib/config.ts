@@ -48,6 +48,19 @@ export const spokeConfigs = {
     },
 };
 
+// Solana Devnet Configuration
+export const solanaConfig = {
+    wormholeChainId: 1,
+    rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+    programId: 'J7JehynQjN4XrucGQ5joMfhQWiViDmmLhQLriGUcWAM2',
+    wormholeCoreBridge: '3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5',
+    wormholeTokenBridge: 'DZnkkTmCiFWfYTfT41X3Rd1kDgozqzxWaHqsw6W4x2oe',
+    network: 'devnet' as const,
+    chainName: 'Solana Devnet',
+    explorerUrl: 'https://explorer.solana.com',
+    commitment: 'confirmed' as const,
+};
+
 // List of all supported chains with their vault configurations
 export const supportedChains = {
     baseSepolia: config,
