@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import type { PortfolioBalance, TokenBalance } from '@veridex/sdk';
+import { useVeridex } from '../lib/VeridexContext';
+import { SolanaBalanceRow } from './SolanaBalanceDisplay';
 
 interface BalanceCardProps {
     balances: PortfolioBalance | null;
@@ -213,6 +215,151 @@ export function BalanceSummary({ nativeBalance, nativeSymbol, usdValue }: Balanc
             {usdValue !== undefined && (
                 <p className="text-gray-400 text-lg">{formatUsdValue(usdValue)}</p>
             )}
+        </div>
+    );
+}
+
+// Multi-chain balance view that includes both EVM and Solana
+interface MultiChainBalanceProps {
+    evmBalances: PortfolioBalance | null;
+    isLoadingEvm: boolean;
+    onRefreshEvm: () => void;
+    evmChainName: string;
+    showSolana?: boolean;
+}
+
+export function MultiChainBalanceCard({ 
+    evmBalances, 
+    isLoadingEvm, 
+    onRefreshEvm, 
+    evmChainName,
+    showSolana = true 
+}: MultiChainBalanceProps) {
+    const { solanaBalance, isLoadingSolanaBalance, solanaVaultAddress } = useVeridex();
+    const [activeTab, setActiveTab] = useState<'all' | 'evm' | 'solana'>('all');
+
+    // Calculate totals
+    const evmTotal = evmBalances?.tokens.reduce((sum, t) => sum + (t.usdValue || 0), 0) || 0;
+    const solanaTotal = solanaBalance?.usdValue ?? 0;
+    const totalValue = evmTotal + solanaTotal;
+
+    const evmTokensWithBalance = evmBalances?.tokens.filter(t => t.balance > BigInt(0)) || [];
+    const hasSolanaBalance = (solanaBalance?.sol ?? 0) > 0;
+
+    return (
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
+            {/* Header with total */}
+            <div className="p-6 border-b border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">Portfolio</h3>
+                </div>
+                
+                <div className="text-center py-4">
+                    {isLoadingEvm || isLoadingSolanaBalance ? (
+                        <div className="animate-pulse">
+                            <div className="h-10 bg-white/10 rounded-lg w-32 mx-auto mb-2" />
+                            <div className="h-4 bg-white/10 rounded w-24 mx-auto" />
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-4xl font-bold text-white mb-1">
+                                {formatUsdValue(totalValue)}
+                            </p>
+                            <p className="text-gray-400 text-sm">Total across all chains</p>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Chain Tabs */}
+            <div className="flex border-b border-white/10">
+                <button
+                    onClick={() => setActiveTab('all')}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                        activeTab === 'all' 
+                            ? 'text-white border-b-2 border-purple-500' 
+                            : 'text-gray-400 hover:text-white'
+                    }`}
+                >
+                    All Chains
+                </button>
+                <button
+                    onClick={() => setActiveTab('evm')}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                        activeTab === 'evm' 
+                            ? 'text-white border-b-2 border-blue-500' 
+                            : 'text-gray-400 hover:text-white'
+                    }`}
+                >
+                    {evmChainName}
+                </button>
+                {showSolana && solanaVaultAddress && (
+                    <button
+                        onClick={() => setActiveTab('solana')}
+                        className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                            activeTab === 'solana' 
+                                ? 'text-white border-b-2 border-purple-500' 
+                                : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                        Solana
+                    </button>
+                )}
+            </div>
+
+            {/* Content based on active tab */}
+            <div className="divide-y divide-white/5">
+                {/* EVM Tokens */}
+                {(activeTab === 'all' || activeTab === 'evm') && (
+                    <>
+                        {activeTab === 'all' && evmTokensWithBalance.length > 0 && (
+                            <div className="px-4 pt-4 pb-2">
+                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{evmChainName}</p>
+                            </div>
+                        )}
+                        {evmTokensWithBalance.map((token) => (
+                            <TokenRow key={token.token.address} token={token} />
+                        ))}
+                        {activeTab === 'evm' && evmTokensWithBalance.length === 0 && !isLoadingEvm && (
+                            <div className="p-8 text-center">
+                                <p className="text-gray-400">No tokens on {evmChainName}</p>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Solana */}
+                {showSolana && solanaVaultAddress && (activeTab === 'all' || activeTab === 'solana') && (
+                    <>
+                        {activeTab === 'all' && (
+                            <div className="px-4 pt-4 pb-2">
+                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Solana Devnet</p>
+                            </div>
+                        )}
+                        <SolanaBalanceRow />
+                        {activeTab === 'solana' && !hasSolanaBalance && !isLoadingSolanaBalance && (
+                            <div className="p-4 text-center">
+                                <p className="text-gray-400 text-sm">Send SOL to your vault to get started</p>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Empty state for all chains */}
+                {activeTab === 'all' && evmTokensWithBalance.length === 0 && !hasSolanaBalance && !isLoadingEvm && !isLoadingSolanaBalance && (
+                    <div className="p-8 text-center">
+                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p className="text-gray-400 mb-2">No tokens yet</p>
+                        <p className="text-gray-500 text-sm">
+                            Receive tokens to see them here
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
