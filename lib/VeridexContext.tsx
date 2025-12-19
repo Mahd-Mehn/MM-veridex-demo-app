@@ -32,6 +32,10 @@ export interface SolanaBalance {
     address: string;
     lamports: bigint;
     sol: number;
+    /** Alias for sol for component compatibility */
+    native: number;
+    /** USD value (optional, fetched from price API) */
+    usdValue?: number;
 }
 
 interface VeridexContextType {
@@ -337,10 +341,14 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             const data = await response.json();
             if (data.result && typeof data.result.value === 'number') {
                 const lamports = BigInt(data.result.value);
+                const solAmount = Number(lamports) / 1_000_000_000;
                 setSolanaBalance({
                     address: solanaVaultAddress,
                     lamports,
-                    sol: Number(lamports) / 1_000_000_000,
+                    sol: solAmount,
+                    native: solAmount,
+                    // TODO: Fetch SOL price from an oracle/API for USD value
+                    usdValue: undefined,
                 });
             }
         } catch (error) {
