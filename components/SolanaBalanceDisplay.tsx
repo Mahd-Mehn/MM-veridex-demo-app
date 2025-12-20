@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useVeridex } from '../lib/VeridexContext';
 
-const formatSolBalance = (lamports: number): string => {
-    const sol = lamports / 1e9;
+const formatSolBalance = (sol: number): string => {
     if (sol === 0) return '0';
     if (sol < 0.0001) return '< 0.0001';
     if (sol < 1) return sol.toFixed(4);
