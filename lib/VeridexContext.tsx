@@ -103,6 +103,8 @@ interface VeridexContextType {
     isLoadingSolanaBalance: boolean;
     refreshSolanaBalance: () => Promise<void>;
     getSolanaReceiveAddress: () => string | null;
+    createSolanaVault: () => Promise<VaultCreationResult>;
+    solanaVaultExists: boolean;
 }
 
 const VeridexContext = createContext<VeridexContextType | undefined>(undefined);
@@ -136,6 +138,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [solanaVaultAddress, setSolanaVaultAddress] = useState<string | null>(null);
     const [solanaBalance, setSolanaBalance] = useState<SolanaBalance | null>(null);
     const [isLoadingSolanaBalance, setIsLoadingSolanaBalance] = useState<boolean>(false);
+    const [solanaVaultExists, setSolanaVaultExists] = useState<boolean>(false);
 
     // Initialize SDK on mount
     useEffect(() => {
@@ -271,6 +274,20 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     const solVaultAddr = clientToUse.computeVaultAddress(unifiedIdentity.keyHash);
                     setSolanaVaultAddress(solVaultAddr);
                     console.log('Solana vault address:', solVaultAddr);
+                    
+                    // Check if vault exists on-chain via relayer
+                    try {
+                        const vaultInfo = await clientToUse.getVaultViaRelayer(
+                            unifiedIdentity.keyHash,
+                            config.relayerUrl
+                        );
+                        setSolanaVaultExists(vaultInfo.exists);
+                        console.log('Solana vault exists:', vaultInfo.exists);
+                    } catch (existsError) {
+                        // If relayer check fails, assume not exists (can still receive)
+                        console.warn('Could not check Solana vault existence:', existsError);
+                        setSolanaVaultExists(false);
+                    }
                 } catch (solError) {
                     console.warn('Could not compute Solana vault address:', solError);
                 }
@@ -360,6 +377,31 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
     const getSolanaReceiveAddress = (): string | null => {
         return solanaVaultAddress;
+    };
+
+    /**
+     * Create a Solana vault via the relayer (sponsored/gasless)
+     * The vault PDA can receive SOL even before on-chain creation,
+     * but sending requires the vault account to exist.
+     */
+    const createSolanaVault = async (): Promise<VaultCreationResult> => {
+        if (!solanaClient) throw new Error('Solana client not initialized');
+        if (!identity?.keyHash) throw new Error('Not logged in');
+
+        setIsLoading(true);
+        try {
+            const result = await solanaClient.createVaultViaRelayer(
+                identity.keyHash,
+                config.relayerUrl
+            );
+            
+            // Update vault exists state
+            setSolanaVaultExists(true);
+            
+            return result;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Auto-refresh Solana balance when vault address changes
@@ -867,6 +909,8 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 isLoadingSolanaBalance,
                 refreshSolanaBalance,
                 getSolanaReceiveAddress,
+                createSolanaVault,
+                solanaVaultExists,
             }}
         >
             {children}

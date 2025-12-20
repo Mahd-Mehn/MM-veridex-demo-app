@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import type { TokenInfo, PreparedTransfer, CrossChainProgress } from '@veridex/sdk';
 import { ethers } from 'ethers';
 
-// Chain options for cross-chain transfers
+// Chain options for cross-chain transfers (includes both EVM and non-EVM chains)
 const CHAIN_OPTIONS = [
-    { id: 10004, name: 'Base Sepolia', symbol: 'BASE' },
-    { id: 10005, name: 'Optimism Sepolia', symbol: 'OP' },
-    { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB' },
+    { id: 10004, name: 'Base Sepolia', symbol: 'BASE', isEvm: true },
+    { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', isEvm: true },
+    { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', isEvm: true },
+    { id: 1, name: 'Solana Devnet', symbol: 'SOL', isEvm: false },
 ];
 
 interface TransferParams {
@@ -53,15 +54,44 @@ export function SendForm({
     const [txHash, setTxHash] = useState('');
     const [sequence, setSequence] = useState<bigint | null>(null);
 
-    // Get selected token info
-    const tokenInfo = tokens.find(t => t.address === selectedToken) || {
-        symbol: 'ETH',
-        decimals: 18,
-        name: 'Ethereum',
-        address: 'native',
-    };
-
     const isCrossChain = targetChain !== currentChainId;
+    const targetChainInfo = CHAIN_OPTIONS.find(c => c.id === targetChain);
+    const isTargetSolana = targetChainInfo && !targetChainInfo.isEvm;
+    
+    // Check if source chain is Solana (sending FROM Solana vault)
+    const currentChainInfo = CHAIN_OPTIONS.find(c => c.id === currentChainId);
+    const isSourceSolana = currentChainInfo && !currentChainInfo.isEvm;
+
+    // For Solana-originated transfers, force target to be Solana for now
+    // (cross-chain Solana → EVM requires additional Token Bridge integration)
+    const effectiveTargetChain = isSourceSolana ? 1 : targetChain;
+    const isSolanaSameChain = isSourceSolana && effectiveTargetChain === 1;
+
+    // Get selected token info
+    const tokenInfo = isSourceSolana 
+        ? {
+            symbol: 'SOL',
+            decimals: 9, // Solana uses 9 decimals for SOL
+            name: 'Solana',
+            address: 'native',
+        }
+        : tokens.find(t => t.address === selectedToken) || {
+            symbol: 'ETH',
+            decimals: 18,
+            name: 'Ethereum',
+            address: 'native',
+        };
+
+    // Validate address based on target chain
+    const isValidAddress = (addr: string): boolean => {
+        if (isTargetSolana) {
+            // Solana addresses are base58 encoded, typically 32-44 characters
+            // Basic validation: alphanumeric (no 0, O, I, l to avoid confusion)
+            const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+            return base58Regex.test(addr);
+        }
+        return ethers.isAddress(addr);
+    };
 
     const handlePrepare = async () => {
         if (!recipient || !amount) {
@@ -69,8 +99,8 @@ export function SendForm({
             return;
         }
 
-        if (!ethers.isAddress(recipient)) {
-            setError('Invalid recipient address');
+        if (!isValidAddress(recipient)) {
+            setError(isTargetSolana ? 'Invalid Solana address' : 'Invalid recipient address');
             return;
         }
 
@@ -148,6 +178,45 @@ export function SendForm({
     };
 
     // Render based on current step
+    
+    // Show "Coming Soon" only for Solana → EVM cross-chain transfers
+    // Solana-to-Solana (same chain) transfers ARE supported
+    const isSolanaCrossChain = isSourceSolana && targetChain !== 1;
+    if (isSolanaCrossChain) {
+        return (
+            <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Solana → EVM Bridge</h3>
+                <p className="text-purple-400 font-semibold mb-2">Coming Soon!</p>
+                <p className="text-gray-400 text-sm mb-6">
+                    Cross-chain transfers from Solana to EVM chains require Token Bridge integration.
+                </p>
+                
+                <div className="bg-white/5 rounded-xl p-4 text-left mb-4">
+                    <p className="text-sm text-gray-300 mb-3">
+                        <span className="text-green-400 font-medium">✓ What you can do now:</span>
+                    </p>
+                    <ul className="text-sm text-gray-400 space-y-2 ml-4">
+                        <li>• <span className="text-white">Send within Solana</span> to other Solana wallets</li>
+                        <li>• <span className="text-white">Receive funds</span> on your Solana vault</li>
+                        <li>• <span className="text-white">Send TO Solana</span> from EVM chains</li>
+                    </ul>
+                </div>
+
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-left">
+                    <p className="text-xs text-green-300 mb-2">💡 To send within Solana:</p>
+                    <p className="text-sm text-gray-400">
+                        Select &quot;Solana Devnet&quot; as the destination chain to send to another Solana wallet.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+    
     if (step === 'success') {
         return (
             <div className="text-center py-8">
@@ -284,7 +353,7 @@ export function SendForm({
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="0x..."
+                    placeholder={isSourceSolana || isTargetSolana ? "Solana address..." : "0x..."}
                 />
             </div>
 
@@ -298,12 +367,20 @@ export function SendForm({
                     onChange={(e) => setSelectedToken(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                    <option value="native">ETH (Native)</option>
-                    {tokens.filter(t => t.address !== 'native').map((token) => (
-                        <option key={token.address} value={token.address}>
-                            {token.symbol} - {token.name}
-                        </option>
-                    ))}
+                    {isSourceSolana ? (
+                        // Solana tokens
+                        <option value="native">SOL (Native)</option>
+                    ) : (
+                        // EVM tokens
+                        <>
+                            <option value="native">ETH (Native)</option>
+                            {tokens.filter(t => t.address !== 'native').map((token) => (
+                                <option key={token.address} value={token.address}>
+                                    {token.symbol} - {token.name}
+                                </option>
+                            ))}
+                        </>
+                    )}
                 </select>
             </div>
 

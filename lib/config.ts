@@ -20,6 +20,8 @@ export const config = {
     // Factory deployed on Base Sepolia for local vault creation
     vaultFactory: '0x0E4B53AbCE029Df2a1e0068F16C5A35A6a8D85b6',
     vaultImplementation: '0x755F4d7191fC8A3e832E9f8b30c7ab6543F943f3',
+    // Relayer URL for gasless transactions
+    relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001',
 };
 
 // Spoke Chain Configurations

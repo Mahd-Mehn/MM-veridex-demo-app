@@ -66,9 +66,11 @@ interface ReceiveModalProps {
     address: string;
     chainName: string;
     onCopy: () => void;
+    /** Whether this is a Solana chain */
+    isSolana?: boolean;
 }
 
-export function ReceiveModal({ isOpen, onClose, address, chainName, onCopy }: ReceiveModalProps) {
+export function ReceiveModal({ isOpen, onClose, address, chainName, onCopy, isSolana = false }: ReceiveModalProps) {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = useCallback(() => {
@@ -77,6 +79,12 @@ export function ReceiveModal({ isOpen, onClose, address, chainName, onCopy }: Re
         onCopy();
         setTimeout(() => setCopied(false), 2000);
     }, [address, onCopy]);
+
+    const openExplorer = useCallback(() => {
+        if (isSolana) {
+            window.open(`https://explorer.solana.com/address/${address}?cluster=devnet`, '_blank');
+        }
+    }, [address, isSolana]);
 
     if (!isOpen) return null;
 
@@ -89,7 +97,11 @@ export function ReceiveModal({ isOpen, onClose, address, chainName, onCopy }: Re
             />
             
             {/* Modal */}
-            <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-white/10 shadow-2xl">
+            <div className={`relative rounded-2xl p-6 max-w-md w-full mx-4 border shadow-2xl ${
+                isSolana 
+                    ? 'bg-gradient-to-br from-purple-900 to-indigo-900 border-purple-500/30' 
+                    : 'bg-gradient-to-br from-slate-800 to-slate-900 border-white/10'
+            }`}>
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
@@ -99,43 +111,76 @@ export function ReceiveModal({ isOpen, onClose, address, chainName, onCopy }: Re
                     </svg>
                 </button>
 
-                <h3 className="text-xl font-bold text-white mb-2">Receive Funds</h3>
-                <p className="text-gray-400 text-sm mb-6">
-                    Scan this QR code or copy the address to receive funds on {chainName}
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-2">
+                    {isSolana && (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">SOL</span>
+                        </div>
+                    )}
+                    <h3 className="text-xl font-bold text-white">Receive Funds</h3>
+                </div>
+                <p className={`text-sm mb-6 ${isSolana ? 'text-purple-200' : 'text-gray-400'}`}>
+                    {isSolana 
+                        ? 'Scan this QR code or copy the address to receive SOL on Solana Devnet'
+                        : `Scan this QR code or copy the address to receive funds on ${chainName}`
+                    }
                 </p>
 
                 <div className="flex justify-center mb-6">
                     <QRCodeDisplay value={address} size={180} />
                 </div>
 
-                <div className="bg-white/5 rounded-xl p-4 mb-4">
-                    <p className="text-xs text-gray-400 mb-1">Your Vault Address</p>
+                <div className={`rounded-xl p-4 mb-4 ${isSolana ? 'bg-black/30' : 'bg-white/5'}`}>
+                    <p className={`text-xs mb-1 ${isSolana ? 'text-purple-300' : 'text-gray-400'}`}>
+                        {isSolana ? 'Solana Vault Address (PDA)' : 'Your Vault Address'}
+                    </p>
                     <p className="text-white font-mono text-sm break-all">{address}</p>
                 </div>
 
-                <button
-                    onClick={handleCopy}
-                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
-                >
-                    {copied ? (
-                        <>
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={handleCopy}
+                        className={`flex-1 py-3 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                            isSolana 
+                                ? 'bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600 text-white'
+                                : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+                        }`}
+                    >
+                        {copied ? (
+                            <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Copy Address
+                            </>
+                        )}
+                    </button>
+                    {isSolana && (
+                        <button
+                            onClick={openExplorer}
+                            className="py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all flex items-center justify-center"
+                            title="View on Explorer"
+                        >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
-                            Copied!
-                        </>
-                    ) : (
-                        <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Copy Address
-                        </>
+                        </button>
                     )}
-                </button>
+                </div>
 
-                <p className="text-xs text-gray-500 text-center mt-4">
-                    Only send supported tokens to this address on {chainName}
+                <p className={`text-xs text-center ${isSolana ? 'text-purple-300/70' : 'text-gray-500'}`}>
+                    {isSolana 
+                        ? 'This address can receive native SOL and SPL tokens on Solana Devnet'
+                        : `Only send supported tokens to this address on ${chainName}`
+                    }
                 </p>
             </div>
         </div>
