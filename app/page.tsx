@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useVeridex } from '@/lib/VeridexContext';
 import { BalanceCard } from '@/components/BalanceDisplay';
+import { SolanaBalanceCard } from '@/components/SolanaBalanceDisplay';
 import { SendForm } from '@/components/SendForm';
 import { ReceiveModal } from '@/components/QRCode';
-import { ChainTabs, SUPPORTED_CHAINS } from '@/components/ChainSelector';
+import { ChainTabs, SUPPORTED_CHAINS, isSolanaChain, isEvmChain } from '@/components/ChainSelector';
 import { config } from '@/lib/config';
 
 type Tab = 'wallet' | 'send' | 'activity';
@@ -40,6 +41,11 @@ export default function Home() {
     bridgeProgress,
     // Sponsored vault creation (automatic, but expose loading state)
     isCreatingSponsoredVaults,
+    // Solana
+    solanaVaultAddress,
+    solanaBalance,
+    isLoadingSolanaBalance,
+    refreshSolanaBalance,
   } = useVeridex();
 
   const [activeTab, setActiveTab] = useState<Tab>('wallet');
@@ -346,33 +352,108 @@ export default function Home() {
         )}
 
         {/* Vault Address Card */}
-        {vaultAddress && (
-          <div className="mb-6 bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+        {(vaultAddress || solanaVaultAddress) && (
+          <div className={`mb-6 backdrop-blur-lg rounded-2xl p-6 border ${
+            isSolanaChain(selectedChain) 
+              ? 'bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border-purple-500/30' 
+              : 'bg-white/10 border-white/20'
+          }`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold">Your Vault</h3>
               <ChainTabs selectedChainId={selectedChain} onSelect={setSelectedChain} />
             </div>
-            <p className="text-gray-400 font-mono text-sm break-all">{vaultAddress}</p>
             
-            {/* Show subtle loading indicator while vaults are being created in background */}
-            {isCreatingSponsoredVaults && (
-              <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span>Setting up your wallet...</span>
-              </div>
-            )}
+            {/* Chain-specific content */}
+            {isSolanaChain(selectedChain) ? (
+              // Solana Vault Content
+              <>
+                <p className="text-purple-200 font-mono text-sm break-all">{solanaVaultAddress || 'Not available'}</p>
+                
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isLoadingSolanaBalance ? (
+                      <div className="animate-pulse h-5 w-20 bg-white/10 rounded" />
+                    ) : (
+                      <span className="text-white font-medium">
+                        {(solanaBalance?.sol ?? 0).toFixed(4)} SOL
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={refreshSolanaBalance}
+                      disabled={isLoadingSolanaBalance}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                      title="Refresh balance"
+                    >
+                      <svg 
+                        className={`w-4 h-4 text-purple-300 ${isLoadingSolanaBalance ? 'animate-spin' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (solanaVaultAddress) {
+                          navigator.clipboard.writeText(solanaVaultAddress);
+                          setSuccess('Solana address copied!');
+                        }
+                      }}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      title="Copy address"
+                    >
+                      <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => window.open(`https://explorer.solana.com/address/${solanaVaultAddress}?cluster=devnet`, '_blank')}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      title="View on Explorer"
+                    >
+                      <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Ready to receive SOL</span>
+                </div>
+              </>
+            ) : (
+              // EVM Vault Content
+              <>
+                <p className="text-gray-400 font-mono text-sm break-all">{vaultAddress}</p>
+                
+                {/* Show subtle loading indicator while vaults are being created in background */}
+                {isCreatingSponsoredVaults && (
+                  <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Setting up your wallet...</span>
+                  </div>
+                )}
 
-            {/* Show vault status - green checkmark when ready */}
-            {vaultDeployed && !isCreatingSponsoredVaults && (
-              <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Ready to send & receive</span>
-              </div>
+                {/* Show vault status - green checkmark when ready */}
+                {vaultDeployed && !isCreatingSponsoredVaults && (
+                  <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Ready to send & receive</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -381,21 +462,23 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <button
             onClick={() => {
-              if (!vaultAddress) {
-                setError('No wallet address found');
+              // Check for appropriate address based on chain
+              const currentAddress = isSolanaChain(selectedChain) ? solanaVaultAddress : vaultAddress;
+              if (!currentAddress) {
+                setError('No wallet address found for selected chain');
                 return;
               }
-              if (isCreatingSponsoredVaults) {
+              if (isCreatingSponsoredVaults && !isSolanaChain(selectedChain)) {
                 setError('Please wait, your wallet is being set up...');
                 return;
               }
-              // No longer require wallet connection - transfers are gasless via relayer
+              // Allow opening Send tab even for Solana - it will show Coming Soon message
               setActiveTab('send');
             }}
             className={`py-4 rounded-xl font-medium transition flex flex-col items-center gap-2 ${
               activeTab === 'send' 
                 ? 'bg-purple-500 text-white' 
-                : isCreatingSponsoredVaults 
+                : isCreatingSponsoredVaults && !isSolanaChain(selectedChain)
                   ? 'bg-white/5 text-gray-500 cursor-not-allowed'
                   : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
@@ -407,8 +490,10 @@ export default function Home() {
           </button>
           <button
             onClick={() => {
-              if (!vaultAddress) {
-                setError('No wallet address found');
+              // Check for appropriate address based on chain
+              const currentAddress = isSolanaChain(selectedChain) ? solanaVaultAddress : vaultAddress;
+              if (!currentAddress) {
+                setError('No wallet address found for selected chain');
                 return;
               }
               setShowReceiveModal(true);
@@ -499,16 +584,26 @@ export default function Home() {
         )}
 
         {/* Main Content Area */}
-        {activeTab === 'wallet' && vaultAddress && (
-          <BalanceCard
-            balances={vaultBalances}
-            isLoading={isLoadingBalances}
-            onRefresh={refreshBalances}
-            chainName={SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name || 'Unknown'}
-          />
+        {activeTab === 'wallet' && (
+          isSolanaChain(selectedChain) ? (
+            // Solana Balance Display
+            solanaVaultAddress && (
+              <SolanaBalanceCard showReceiveButton={false} />
+            )
+          ) : (
+            // EVM Balance Display
+            vaultAddress && (
+              <BalanceCard
+                balances={vaultBalances}
+                isLoading={isLoadingBalances}
+                onRefresh={refreshBalances}
+                chainName={SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name || 'Unknown'}
+              />
+            )
+          )
         )}
 
-        {activeTab === 'send' && vaultAddress && (
+        {activeTab === 'send' && (vaultAddress || solanaVaultAddress) && (
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Send</h3>
@@ -525,6 +620,11 @@ export default function Home() {
               tokens={getTokenList()}
               currentChainId={selectedChain}
               onSendGasless={async (params) => {
+                // Gasless transfers work the same way for all chains:
+                // 1. User signs with passkey
+                // 2. Relayer submits to Hub (Base)
+                // 3. Hub emits VAA to target chain
+                // 4. Relayer delivers to spoke (EVM or Solana)
                 const result = await transferGasless({
                   targetChain: params.targetChain,
                   token: params.token,
@@ -535,7 +635,7 @@ export default function Home() {
                 return result;
               }}
               isLoading={isLoading}
-              vaultAddress={vaultAddress}
+              vaultAddress={(isSolanaChain(selectedChain) ? solanaVaultAddress : vaultAddress) ?? ''}
             />
           </div>
         )}
@@ -637,9 +737,10 @@ export default function Home() {
         <ReceiveModal
           isOpen={showReceiveModal}
           onClose={() => setShowReceiveModal(false)}
-          address={vaultAddress || ''}
+          address={(isSolanaChain(selectedChain) ? solanaVaultAddress : vaultAddress) || ''}
           chainName={SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name || 'Unknown'}
           onCopy={() => setSuccess('Address copied!')}
+          isSolana={isSolanaChain(selectedChain)}
         />
       </main>
     </div>

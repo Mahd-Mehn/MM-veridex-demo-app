@@ -8,13 +8,29 @@ export interface ChainOption {
     symbol: string;
     logo?: string;
     color: string;
+    /** Whether this is an EVM chain (default: true) */
+    isEvm?: boolean;
+    /** Native token symbol */
+    nativeToken?: string;
+    /** Explorer URL template */
+    explorerUrl?: string;
 }
 
 export const SUPPORTED_CHAINS: ChainOption[] = [
-    { id: 10004, name: 'Base Sepolia', symbol: 'BASE', color: 'from-blue-500 to-blue-600' },
-    { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', color: 'from-red-500 to-red-600' },
-    { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', color: 'from-cyan-500 to-blue-600' },
+    { id: 10004, name: 'Base Sepolia', symbol: 'BASE', color: 'from-blue-500 to-blue-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia.basescan.org' },
+    { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', color: 'from-red-500 to-red-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia-optimism.etherscan.io' },
+    { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', color: 'from-cyan-500 to-blue-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia.arbiscan.io' },
+    { id: 1, name: 'Solana Devnet', symbol: 'SOL', color: 'from-purple-500 to-cyan-400', isEvm: false, nativeToken: 'SOL', explorerUrl: 'https://explorer.solana.com' },
 ];
+
+/** Helper to check if a chain is Solana */
+export const isSolanaChain = (chainId: number): boolean => chainId === 1;
+
+/** Helper to check if a chain is EVM */
+export const isEvmChain = (chainId: number): boolean => {
+    const chain = SUPPORTED_CHAINS.find(c => c.id === chainId);
+    return chain?.isEvm !== false;
+};
 
 interface ChainSelectorProps {
     selectedChainId: number;
