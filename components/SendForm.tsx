@@ -10,6 +10,7 @@ const CHAIN_OPTIONS = [
     { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', isEvm: true },
     { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', isEvm: true },
     { id: 1, name: 'Solana Devnet', symbol: 'SOL', isEvm: false },
+    { id: 50001, name: 'Starknet Sepolia', symbol: 'STRK', isEvm: false },
 ];
 
 interface TransferParams {
@@ -56,7 +57,8 @@ export function SendForm({
 
     const isCrossChain = targetChain !== currentChainId;
     const targetChainInfo = CHAIN_OPTIONS.find(c => c.id === targetChain);
-    const isTargetSolana = targetChainInfo && !targetChainInfo.isEvm;
+    const isTargetSolana = targetChainInfo?.id === 1;
+    const isTargetStarknet = targetChainInfo?.id === 50001;
     
     // Check if source chain is Solana (sending FROM Solana vault)
     const currentChainInfo = CHAIN_OPTIONS.find(c => c.id === currentChainId);
@@ -90,6 +92,22 @@ export function SendForm({
             const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
             return base58Regex.test(addr);
         }
+        if (isTargetStarknet) {
+            // Starknet addresses are felt252 (0x + up to 64 hex chars)
+            // Must be valid hex and within felt252 range (< 2^251)
+            if (!/^0x[0-9a-fA-F]{1,64}$/.test(addr)) {
+                return false;
+            }
+            // Basic range check: ensure it's not too large for felt252
+            // Felt252 max ≈ 0x0800000000000011000000000000000000000000000000000000000000000000
+            try {
+                const num = BigInt(addr);
+                const FELT252_MAX = BigInt('0x0800000000000011000000000000000000000000000000000000000000000000');
+                return num < FELT252_MAX;
+            } catch {
+                return false;
+            }
+        }
         return ethers.isAddress(addr);
     };
 
@@ -100,7 +118,13 @@ export function SendForm({
         }
 
         if (!isValidAddress(recipient)) {
-            setError(isTargetSolana ? 'Invalid Solana address' : 'Invalid recipient address');
+            setError(
+                isTargetSolana 
+                    ? 'Invalid Solana address (base58, 32-44 chars)'
+                    : isTargetStarknet
+                    ? 'Invalid Starknet address (0x + hex, felt252 range)'
+                    : 'Invalid recipient address'
+            );
             return;
         }
 
