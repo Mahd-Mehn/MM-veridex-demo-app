@@ -21,11 +21,19 @@ export const SUPPORTED_CHAINS: ChainOption[] = [
     { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', color: 'from-red-500 to-red-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia-optimism.etherscan.io' },
     { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', color: 'from-cyan-500 to-blue-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia.arbiscan.io' },
     { id: 1, name: 'Solana Devnet', symbol: 'SOL', color: 'from-purple-500 to-cyan-400', isEvm: false, nativeToken: 'SOL', explorerUrl: 'https://explorer.solana.com' },
+    { id: 21, name: 'Sui Testnet', symbol: 'SUI', color: 'from-cyan-500 to-teal-500', isEvm: false, nativeToken: 'SUI', explorerUrl: 'https://suiscan.xyz/testnet' },
+    { id: 22, name: 'Aptos Testnet', symbol: 'APT', color: 'from-green-500 to-emerald-600', isEvm: false, nativeToken: 'APT', explorerUrl: 'https://explorer.aptoslabs.com' },
     { id: 50001, name: 'Starknet Sepolia', symbol: 'STRK', color: 'from-orange-500 to-pink-600', isEvm: false, nativeToken: 'ETH', explorerUrl: 'https://sepolia.starkscan.co' },
 ];
 
 /** Helper to check if a chain is Solana */
 export const isSolanaChain = (chainId: number): boolean => chainId === 1;
+
+/** Helper to check if a chain is Sui */
+export const isSuiChain = (chainId: number): boolean => chainId === 21;
+
+/** Helper to check if a chain is Aptos */
+export const isAptosChain = (chainId: number): boolean => chainId === 22;
 
 /** Helper to check if a chain is Starknet */
 export const isStarknetChain = (chainId: number): boolean => chainId === 50001;
