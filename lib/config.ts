@@ -6,6 +6,8 @@ const RPC_URLS = {
     optimismSepolia: process.env.NEXT_PUBLIC_OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
     arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
     starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7',
+    suiTestnet: process.env.NEXT_PUBLIC_SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
+    aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://fullnode.testnet.aptoslabs.com/v1',
 };
 
 // Base Sepolia (Hub Chain) - Now also has factory for vault creation
@@ -62,6 +64,29 @@ export const solanaConfig = {
     chainName: 'Solana Devnet',
     explorerUrl: 'https://explorer.solana.com',
     commitment: 'confirmed' as const,
+};
+
+// Sui Testnet Configuration
+export const suiConfig = {
+    wormholeChainId: 21,
+    rpcUrl: RPC_URLS.suiTestnet,
+    packageId: '0x6ae854c698d73e39f5dc07c4d2291fa81e8732aded14bbff3b98cfa8bfaebff5',
+    wormholeCoreBridge: '0x31358d198147da50db32eda2562951d53973a0c0ad5ed738e9b17d88b213d790',
+    network: 'testnet' as const,
+    chainName: 'Sui Testnet',
+    explorerUrl: 'https://suiscan.xyz/testnet',
+};
+
+// Aptos Testnet Configuration
+export const aptosConfig = {
+    wormholeChainId: 22,
+    rpcUrl: RPC_URLS.aptosTestnet,
+    moduleAddress: '0x65c2347fabc7a728ceb57a8c8af54bf5e53d8c4550f4b9bb387429385c1b3535',
+    wormholeCoreBridge: '0x5bc11445584a763c1fa7ed39081f1b920954da14e04b32440cba863d03e19625',
+    tokenBridge: '0x576410486a2da45eee6c949c995670112ddf2fbeedab20350d506328eefc9d4f',
+    network: 'testnet' as const,
+    chainName: 'Aptos Testnet',
+    explorerUrl: 'https://explorer.aptoslabs.com',
 };
 
 // Starknet Sepolia Configuration

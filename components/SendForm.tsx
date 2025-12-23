@@ -10,6 +10,8 @@ const CHAIN_OPTIONS = [
     { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', isEvm: true },
     { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', isEvm: true },
     { id: 1, name: 'Solana Devnet', symbol: 'SOL', isEvm: false },
+    { id: 21, name: 'Sui Testnet', symbol: 'SUI', isEvm: false },
+    { id: 22, name: 'Aptos Testnet', symbol: 'APT', isEvm: false },
     { id: 50001, name: 'Starknet Sepolia', symbol: 'STRK', isEvm: false },
 ];
 
@@ -58,6 +60,8 @@ export function SendForm({
     const isCrossChain = targetChain !== currentChainId;
     const targetChainInfo = CHAIN_OPTIONS.find(c => c.id === targetChain);
     const isTargetSolana = targetChainInfo?.id === 1;
+    const isTargetSui = targetChainInfo?.id === 21;
+    const isTargetAptos = targetChainInfo?.id === 22;
     const isTargetStarknet = targetChainInfo?.id === 50001;
     
     // Check if source chain is Solana (sending FROM Solana vault)
@@ -92,6 +96,16 @@ export function SendForm({
             const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
             return base58Regex.test(addr);
         }
+        if (isTargetSui) {
+            // Sui addresses are 0x + 64 hex characters (32 bytes)
+            // Must start with 0x and be exactly 66 characters
+            return /^0x[0-9a-fA-F]{64}$/.test(addr);
+        }
+        if (isTargetAptos) {
+            // Aptos addresses are 0x + up to 64 hex characters (32 bytes)
+            // Can be shorter (will be left-padded with zeros)
+            return /^0x[0-9a-fA-F]{1,64}$/.test(addr);
+        }
         if (isTargetStarknet) {
             // Starknet addresses are felt252 (0x + up to 64 hex chars)
             // Must be valid hex and within felt252 range (< 2^251)
@@ -121,6 +135,10 @@ export function SendForm({
             setError(
                 isTargetSolana 
                     ? 'Invalid Solana address (base58, 32-44 chars)'
+                    : isTargetSui
+                    ? 'Invalid Sui address (0x + 64 hex chars)'
+                    : isTargetAptos
+                    ? 'Invalid Aptos address (0x + up to 64 hex chars)'
                     : isTargetStarknet
                     ? 'Invalid Starknet address (0x + hex, felt252 range)'
                     : 'Invalid recipient address'
