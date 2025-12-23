@@ -5,6 +5,7 @@ const RPC_URLS = {
     baseSepolia: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
     optimismSepolia: process.env.NEXT_PUBLIC_OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
     arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+    starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7',
 };
 
 // Base Sepolia (Hub Chain) - Now also has factory for vault creation
@@ -61,6 +62,25 @@ export const solanaConfig = {
     chainName: 'Solana Devnet',
     explorerUrl: 'https://explorer.solana.com',
     commitment: 'confirmed' as const,
+};
+
+// Starknet Sepolia Configuration
+// Uses CUSTOM BRIDGE (not Wormhole VAA) - multi-relayer threshold attestations
+export const starknetConfig = {
+    wormholeChainId: 50001, // Custom chain ID (50000+ reserved for non-Wormhole chains)
+    chainId: 0, // Native Starknet chain ID (SN_SEPOLIA)
+    rpcUrl: RPC_URLS.starknetSepolia,
+    // Starknet spoke contract
+    spokeAddress: '0x767073ab5682d1908c7f6498eee8e480fb2457dbcf34bab075c5dd536d08176',
+    // Custom bridge contract (NOT Wormhole)
+    bridgeAddress: '0x5fb87f29937b2b1eff97e18cd72c3c28985e51e2916b0b75f739c5641845e13',
+    network: 'sepolia' as const,
+    chainName: 'Starknet Sepolia',
+    explorerUrl: 'https://sepolia.starkscan.co',
+    // Hub chain ID that Starknet bridge validates (Base Sepolia = 10004)
+    hubChainId: 10004,
+    // Gasless execution: relayer pays ALL fees on Starknet
+    isGasless: true,
 };
 
 // List of all supported chains with their vault configurations
