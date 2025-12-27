@@ -34,13 +34,13 @@ const formatUsdValue = (value: number): string => {
 const tokenIcons: Record<string, string> = {
     ETH: '⟠',
     WETH: '⟠',
-    USDC: '💵',
-    USDT: '💵',
-    DAI: '🔶',
+    USDC: '',
+    USDT: '',
+    DAI: '',
     WBTC: '₿',
-    LINK: '🔗',
-    UNI: '🦄',
-    default: '🪙',
+    LINK: 'LINK',
+    UNI: '',
+    default: '',
 };
 
 const getTokenIcon = (symbol: string): string => {

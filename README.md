@@ -2,7 +2,7 @@
 
 A comprehensive Next.js 15 test application for the Veridex Protocol SDK, featuring passkey-based cross-chain authentication, gasless token transfers, and multi-chain vault management.
 
-## 🚀 Features
+## START Features
 
 - **Passkey Registration & Login**: Test WebAuthn passkey creation and authentication
 - **Gasless Transfers**: Send tokens without paying gas - relayer covers all fees
@@ -11,14 +11,14 @@ A comprehensive Next.js 15 test application for the Veridex Protocol SDK, featur
 - **Cross-Chain Transfers**: Execute token transfers across different chains using passkeys
 - **Beautiful UI**: Modern glassmorphic design with real-time status indicators
 
-## 📋 Prerequisites
+## NOTE Prerequisites
 
 - Node.js 18+ installed
 - MetaMask browser extension (optional - only needed for gas-paying flows)
 - Base Sepolia testnet ETH (optional - gasless transfers don't require user ETH)
 - A WebAuthn-compatible device (most modern browsers support this)
 
-## 🛠️ Setup
+##  Setup
 
 1. **Install Dependencies**
    ```bash
@@ -60,7 +60,7 @@ A comprehensive Next.js 15 test application for the Veridex Protocol SDK, featur
 5. **Open Browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 🧪 Testing Flow
+##  Testing Flow
 
 ### 1. Register a Passkey
 
@@ -108,7 +108,7 @@ The transfer flow:
 3. Relayer submits to Hub chain (paying gas)
 4. Relayer automatically relays VAA to destination chain
 
-## 🔑 Passkey Authentication
+##  Passkey Authentication
 
 The app uses WebAuthn for secure, passwordless authentication:
 
@@ -121,7 +121,7 @@ Credentials are stored in localStorage and include:
 - Public Key (X and Y coordinates)
 - Key Hash (used for vault identification)
 
-## 🌐 Supported Chains
+## NETWORK Supported Chains
 
 The test app is configured for Base Sepolia as the hub chain:
 
@@ -133,7 +133,7 @@ The test app is configured for Base Sepolia as the hub chain:
 | Solana Devnet | 1 | Solana | Spoke |
 | Aptos Testnet | 22 | Aptos | Spoke |
 
-## 📦 SDK Usage Example
+## PACKAGE SDK Usage Example
 
 ```typescript
 import { VeridexSDK, EVMClient } from '@veridex/sdk';
@@ -171,7 +171,7 @@ const result = await sdk.transferViaRelayer({
 console.log('TX:', result.transactionHash);
 ```
 
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
 test-app/
@@ -191,7 +191,7 @@ test-app/
 }, signer);
 ```
 
-## 🎨 UI Components
+##  UI Components
 
 The app features:
 
@@ -201,7 +201,7 @@ The app features:
 - **Credential Details**: Display of public key coordinates and key hash
 - **Error/Success Messages**: User-friendly feedback for all operations
 
-## 🔧 Troubleshooting
+## TOOLS Troubleshooting
 
 ### Passkey Registration Fails
 - Ensure you're using a WebAuthn-compatible browser (Chrome, Firefox, Safari, Edge)
@@ -224,14 +224,14 @@ The app features:
 - Ensure vault has sufficient token balance
 - Verify recipient address is correct
 
-## 📚 Resources
+## DOCS Resources
 
 - [Veridex Protocol Documentation](https://github.com/Veridex-Protocol/demo)
 - [WebAuthn Guide](https://webauthn.guide/)
 - [Wormhole Documentation](https://docs.wormhole.com/)
 - [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet)
 
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
 test-app/
@@ -245,13 +245,13 @@ test-app/
 └── package.json            # Dependencies
 ```
 
-## 🔐 Security Notes
+## SECURITY Security Notes
 
 - This is a **test application** for development purposes only
 - Never use real funds or production keys
 - Passkeys are stored in localStorage (not recommended for production)
 - Always verify transactions before signing
 
-## 📝 License
+## NOTE License
 
 MIT

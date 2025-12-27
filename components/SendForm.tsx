@@ -240,7 +240,7 @@ export function SendForm({
                 
                 <div className="bg-white/5 rounded-xl p-4 text-left mb-4">
                     <p className="text-sm text-gray-300 mb-3">
-                        <span className="text-green-400 font-medium">✓ What you can do now:</span>
+                        <span className="text-green-400 font-medium">OK What you can do now:</span>
                     </p>
                     <ul className="text-sm text-gray-400 space-y-2 ml-4">
                         <li>• <span className="text-white">Send within Solana</span> to other Solana wallets</li>
@@ -250,7 +250,7 @@ export function SendForm({
                 </div>
 
                 <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-left">
-                    <p className="text-xs text-green-300 mb-2">💡 To send within Solana:</p>
+                    <p className="text-xs text-green-300 mb-2"> To send within Solana:</p>
                     <p className="text-sm text-gray-400">
                         Select &quot;Solana Devnet&quot; as the destination chain to send to another Solana wallet.
                     </p>
