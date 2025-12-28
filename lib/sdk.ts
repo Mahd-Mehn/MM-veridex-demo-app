@@ -21,7 +21,7 @@ import {
     type ChainName,
     type NetworkType,
     type SimpleSDKConfig,
-} from 'veridex-sdk';
+} from '@veridex/sdk';
 
 // ============================================================================
 // Environment Configuration
@@ -156,10 +156,10 @@ export function getSDKForChain(chain: SupportedChain) {
 // Re-exports for convenience
 // ============================================================================
 
-export type { ChainName, NetworkType } from 'veridex-sdk';
+export type { ChainName, NetworkType } from '@veridex/sdk';
 export { 
     CHAIN_NAMES, 
     getSupportedChains, 
     getHubChains,
     isChainSupported,
-} from 'veridex-sdk';
+} from '@veridex/sdk';
