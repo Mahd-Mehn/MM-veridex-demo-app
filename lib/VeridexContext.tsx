@@ -875,8 +875,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             return;
         }
         try {
-            const hasBackup = await sdk.hasBackupPasskeys();
-            setHasBackupPasskey(hasBackup);
+            // Check if SDK has the method (may not be available in all versions)
+            if (typeof (sdk as any).hasBackupPasskeys === 'function') {
+                const hasBackup = await (sdk as any).hasBackupPasskeys();
+                setHasBackupPasskey(hasBackup);
+            } else {
+                setHasBackupPasskey(false);
+            }
         } catch (err) {
             console.warn('Failed to check backup passkey status:', err);
             setHasBackupPasskey(false);
