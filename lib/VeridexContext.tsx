@@ -105,6 +105,12 @@ interface VeridexContextType {
     getSolanaReceiveAddress: () => string | null;
     createSolanaVault: () => Promise<VaultCreationResult>;
     solanaVaultExists: boolean;
+
+    // Backup Passkey Management (Issue #22/#25)
+    hasBackupPasskey: boolean;
+    isAddingBackupPasskey: boolean;
+    addBackupPasskey: () => Promise<void>;
+    checkBackupPasskeyStatus: () => Promise<void>;
 }
 
 const VeridexContext = createContext<VeridexContextType | undefined>(undefined);
@@ -139,6 +145,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [solanaBalance, setSolanaBalance] = useState<SolanaBalance | null>(null);
     const [isLoadingSolanaBalance, setIsLoadingSolanaBalance] = useState<boolean>(false);
     const [solanaVaultExists, setSolanaVaultExists] = useState<boolean>(false);
+
+    // Backup passkey state (Issue #22/#25)
+    const [hasBackupPasskey, setHasBackupPasskey] = useState<boolean>(false);
+    const [isAddingBackupPasskey, setIsAddingBackupPasskey] = useState<boolean>(false);
 
     // Initialize SDK on mount
     useEffect(() => {
@@ -291,6 +301,19 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 } catch (solError) {
                     console.warn('Could not compute Solana vault address:', solError);
                 }
+            }
+            // Check if user has backup passkeys (Issue #22/#25)
+            try {
+                // Check if SDK has the method (may not be available in all versions)
+                if (typeof (sdkInstance as any).hasBackupPasskeys === 'function') {
+                    const hasBackup = await (sdkInstance as any).hasBackupPasskeys();
+                    setHasBackupPasskey(hasBackup);
+                } else {
+                    setHasBackupPasskey(false);
+                }
+            } catch {
+                console.warn('Could not check backup passkey status');
+                setHasBackupPasskey(false);
             }
         } catch (error) {
             console.warn('Could not load identity:', error);
@@ -843,6 +866,59 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         return sdk.passkey.hasStoredCredential();
     };
 
+    /**
+     * Check if user has backup passkeys registered (Issue #22/#25)
+     */
+    const checkBackupPasskeyStatus = async (): Promise<void> => {
+        if (!sdk || !credential) {
+            setHasBackupPasskey(false);
+            return;
+        }
+        try {
+            const hasBackup = await sdk.hasBackupPasskeys();
+            setHasBackupPasskey(hasBackup);
+        } catch (err) {
+            console.warn('Failed to check backup passkey status:', err);
+            setHasBackupPasskey(false);
+        }
+    };
+
+    /**
+     * Add a backup passkey for the current identity (Issue #22/#25)
+     * Requires wallet connection (signer) for gas payment.
+     * Prompts user to create a new passkey and registers it as a backup.
+     */
+    const addBackupPasskey = async (): Promise<void> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        if (!signer) throw new Error('Wallet not connected. Please connect your wallet first.');
+        if (!credential) throw new Error('No passkey registered. Please register a passkey first.');
+
+        // Check if SDK has the method (may not be available in all versions)
+        if (typeof (sdk as any).addBackupPasskey !== 'function') {
+            throw new Error('Backup passkey feature not available in this SDK version');
+        }
+
+        setIsAddingBackupPasskey(true);
+        try {
+            // Create a new passkey credential for backup
+            // Use a different username to distinguish from primary
+            const backupUsername = `${credential.credentialId.slice(0, 8)}-backup-${Date.now()}`;
+            const backupCred = await sdk.passkey.register(backupUsername, 'Backup Passkey');
+
+            // Add the backup passkey to the identity
+            const result = await (sdk as any).addBackupPasskey(backupCred, signer);
+            console.log('Backup passkey added:', result);
+
+            // Update backup status
+            setHasBackupPasskey(true);
+
+            // Re-set the original credential (registration changes the active credential)
+            sdk.setCredential(credential);
+        } finally {
+            setIsAddingBackupPasskey(false);
+        }
+    };
+
     return (
         <VeridexContext.Provider
             value={{
@@ -911,6 +987,12 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 getSolanaReceiveAddress,
                 createSolanaVault,
                 solanaVaultExists,
+
+                // Backup Passkey Management (Issue #22/#25)
+                hasBackupPasskey,
+                isAddingBackupPasskey,
+                addBackupPasskey,
+                checkBackupPasskeyStatus,
             }}
         >
             {children}
