@@ -5,7 +5,7 @@ const RPC_URLS = {
     baseSepolia: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
     optimismSepolia: process.env.NEXT_PUBLIC_OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
     arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
-    starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7',
+    starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/tsOnfTBZDKMXcUA26OED-',
     suiTestnet: process.env.NEXT_PUBLIC_SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
     aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://fullnode.testnet.aptoslabs.com/v1',
 };
