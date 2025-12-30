@@ -30,8 +30,25 @@ import {
 } from '@veridex/sdk';
 import { EVMClient } from '@veridex/sdk/chains/evm';
 import { SolanaClient } from '@veridex/sdk/chains/solana';
+import { SuiClient } from '@veridex/sdk/chains/sui';
+import { AptosClient } from '@veridex/sdk/chains/aptos';
+import { StarknetClient } from '@veridex/sdk/chains/starknet';
 import { ethers } from 'ethers';
-import { config, spokeConfigs, solanaConfig } from '@/lib/config';
+import { config, spokeConfigs, solanaConfig, suiConfig, aptosConfig, starknetConfig } from '@/lib/config';
+
+// Multi-chain vault addresses type
+export interface MultiChainVaultAddresses {
+    /** EVM vault address (Base Sepolia) */
+    evm: string | null;
+    /** Solana vault address */
+    solana: string | null;
+    /** Sui vault address */
+    sui: string | null;
+    /** Aptos vault address */
+    aptos: string | null;
+    /** Starknet vault address */
+    starknet: string | null;
+}
 
 // Solana balance type
 export interface SolanaBalance {
@@ -112,6 +129,27 @@ interface VeridexContextType {
     createSolanaVault: () => Promise<VaultCreationResult>;
     solanaVaultExists: boolean;
 
+    // Multi-chain vault addresses (Sui, Aptos, Starknet)
+    suiVaultAddress: string | null;
+    aptosVaultAddress: string | null;
+    starknetVaultAddress: string | null;
+    /** Get vault address for any chain by Wormhole chain ID */
+    getVaultAddressForChain: (wormholeChainId: number) => string | null;
+    /** All vault addresses across chains */
+    multiChainVaultAddresses: MultiChainVaultAddresses;
+
+    // Sui vault management
+    suiVaultExists: boolean;
+    createSuiVault: () => Promise<VaultCreationResult>;
+
+    // Aptos vault management
+    aptosVaultExists: boolean;
+    createAptosVault: () => Promise<VaultCreationResult>;
+
+    // Starknet vault management
+    starknetVaultExists: boolean;
+    createStarknetVault: () => Promise<VaultCreationResult>;
+
     // Backup Passkey Management (Issue #22/#25)
     hasBackupPasskey: boolean;
     isAddingBackupPasskey: boolean;
@@ -164,6 +202,17 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [solanaBalance, setSolanaBalance] = useState<SolanaBalance | null>(null);
     const [isLoadingSolanaBalance, setIsLoadingSolanaBalance] = useState<boolean>(false);
     const [solanaVaultExists, setSolanaVaultExists] = useState<boolean>(false);
+
+    // Multi-chain vault addresses (Sui, Aptos, Starknet)
+    const [suiClient, setSuiClient] = useState<SuiClient | null>(null);
+    const [aptosClient, setAptosClient] = useState<AptosClient | null>(null);
+    const [starknetClient, setStarknetClient] = useState<StarknetClient | null>(null);
+    const [suiVaultAddress, setSuiVaultAddress] = useState<string | null>(null);
+    const [aptosVaultAddress, setAptosVaultAddress] = useState<string | null>(null);
+    const [starknetVaultAddress, setStarknetVaultAddress] = useState<string | null>(null);
+    const [suiVaultExists, setSuiVaultExists] = useState<boolean>(false);
+    const [aptosVaultExists, setAptosVaultExists] = useState<boolean>(false);
+    const [starknetVaultExists, setStarknetVaultExists] = useState<boolean>(false);
 
     // Backup passkey state (Issue #22/#25)
     const [hasBackupPasskey, setHasBackupPasskey] = useState<boolean>(false);
@@ -225,6 +274,37 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     commitment: solanaConfig.commitment,
                 });
                 setSolanaClient(solClient);
+
+                // Initialize Sui client
+                const suiClientInstance = new SuiClient({
+                    wormholeChainId: suiConfig.wormholeChainId,
+                    rpcUrl: suiConfig.rpcUrl,
+                    packageId: suiConfig.packageId,
+                    wormholeCoreBridge: suiConfig.wormholeCoreBridge,
+                    network: suiConfig.network,
+                });
+                setSuiClient(suiClientInstance);
+
+                // Initialize Aptos client
+                const aptosClientInstance = new AptosClient({
+                    wormholeChainId: aptosConfig.wormholeChainId,
+                    rpcUrl: aptosConfig.rpcUrl,
+                    moduleAddress: aptosConfig.moduleAddress,
+                    wormholeCoreBridge: aptosConfig.wormholeCoreBridge,
+                    tokenBridge: aptosConfig.tokenBridge,
+                    network: aptosConfig.network,
+                });
+                setAptosClient(aptosClientInstance);
+
+                // Initialize Starknet client
+                const starknetClientInstance = new StarknetClient({
+                    wormholeChainId: starknetConfig.wormholeChainId,
+                    rpcUrl: starknetConfig.rpcUrl,
+                    spokeContractAddress: starknetConfig.spokeAddress,
+                    bridgeContractAddress: starknetConfig.bridgeAddress,
+                    network: starknetConfig.network,
+                });
+                setStarknetClient(starknetClientInstance);
 
                 setSdk(veridexSdk);
 
@@ -326,6 +406,82 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     console.warn('Could not compute Solana vault address:', solError);
                 }
             }
+
+            // Compute Sui vault address using keyHash
+            if (suiClient && unifiedIdentity.keyHash) {
+                try {
+                    const suiVaultAddr = suiClient.computeVaultAddress(unifiedIdentity.keyHash);
+                    setSuiVaultAddress(suiVaultAddr);
+                    console.log('Sui vault address:', suiVaultAddr);
+                    
+                    // Check if Sui vault exists via relayer
+                    try {
+                        const vaultInfo = await suiClient.getVaultViaRelayer(
+                            unifiedIdentity.keyHash,
+                            config.relayerUrl
+                        );
+                        setSuiVaultExists(vaultInfo.exists);
+                        console.log('Sui vault exists:', vaultInfo.exists);
+                    } catch (existsError) {
+                        // Sui uses implicit accounts - always consider as existing
+                        console.warn('Could not check Sui vault existence:', existsError);
+                        setSuiVaultExists(true); // Sui implicit accounts always exist
+                    }
+                } catch (suiError) {
+                    console.warn('Could not compute Sui vault address:', suiError);
+                }
+            }
+
+            // Compute Aptos vault address using keyHash
+            if (aptosClient && unifiedIdentity.keyHash) {
+                try {
+                    const aptosVaultAddr = aptosClient.computeVaultAddress(unifiedIdentity.keyHash);
+                    setAptosVaultAddress(aptosVaultAddr);
+                    console.log('Aptos vault address:', aptosVaultAddr);
+                    
+                    // Check if Aptos vault exists via relayer
+                    try {
+                        const vaultInfo = await aptosClient.getVaultViaRelayer(
+                            unifiedIdentity.keyHash,
+                            config.relayerUrl
+                        );
+                        setAptosVaultExists(vaultInfo.exists);
+                        console.log('Aptos vault exists:', vaultInfo.exists);
+                    } catch (existsError) {
+                        console.warn('Could not check Aptos vault existence:', existsError);
+                        setAptosVaultExists(false);
+                    }
+                } catch (aptosError) {
+                    console.warn('Could not compute Aptos vault address:', aptosError);
+                }
+            }
+
+            // Get Starknet vault address (requires RPC call to spoke contract)
+            if (starknetClient && unifiedIdentity.keyHash) {
+                try {
+                    const starknetVaultAddr = await starknetClient.getVaultAddress(unifiedIdentity.keyHash);
+                    setStarknetVaultAddress(starknetVaultAddr);
+                    console.log('Starknet vault address:', starknetVaultAddr);
+                    
+                    // Check if Starknet vault exists via relayer
+                    try {
+                        const vaultInfo = await starknetClient.getVaultViaRelayer(
+                            unifiedIdentity.keyHash,
+                            config.relayerUrl
+                        );
+                        setStarknetVaultExists(vaultInfo.exists);
+                        console.log('Starknet vault exists:', vaultInfo.exists);
+                    } catch (existsError) {
+                        console.warn('Could not check Starknet vault existence:', existsError);
+                        setStarknetVaultExists(false);
+                    }
+                } catch (starknetError) {
+                    console.warn('Could not get Starknet vault address:', starknetError);
+                    // Starknet vault may not exist yet - that's okay
+                    setStarknetVaultAddress(null);
+                }
+            }
+
             // Check if user has backup passkeys (Issue #22/#25)
             try {
                 // Check if SDK has the method (may not be available in all versions)
@@ -551,6 +707,52 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     };
 
     /**
+     * Get vault address for any supported chain by Wormhole chain ID
+     * This is the universal accessor for multi-chain vault addresses
+     */
+    const getVaultAddressForChain = useCallback((wormholeChainId: number): string | null => {
+        switch (wormholeChainId) {
+            // EVM chains (all use the same EVM vault address from hub)
+            case 10004: // Base Sepolia
+            case 10005: // Optimism Sepolia
+            case 10003: // Arbitrum Sepolia
+            case 40:    // Sei Atlantic-2
+                return vaultAddress;
+            
+            // Solana
+            case 1:
+                return solanaVaultAddress;
+            
+            // Sui
+            case 21:
+                return suiVaultAddress;
+            
+            // Aptos
+            case 22:
+                return aptosVaultAddress;
+            
+            // Starknet
+            case 50001:
+                return starknetVaultAddress;
+            
+            default:
+                console.warn(`Unknown chain ID: ${wormholeChainId}`);
+                return null;
+        }
+    }, [vaultAddress, solanaVaultAddress, suiVaultAddress, aptosVaultAddress, starknetVaultAddress]);
+
+    /**
+     * All vault addresses across chains (computed)
+     */
+    const multiChainVaultAddresses: MultiChainVaultAddresses = {
+        evm: vaultAddress,
+        solana: solanaVaultAddress,
+        sui: suiVaultAddress,
+        aptos: aptosVaultAddress,
+        starknet: starknetVaultAddress,
+    };
+
+    /**
      * Create a Solana vault via the relayer (sponsored/gasless)
      * The vault PDA can receive SOL even before on-chain creation,
      * but sending requires the vault account to exist.
@@ -568,6 +770,79 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             
             // Update vault exists state
             setSolanaVaultExists(true);
+            
+            return result;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * Create a Sui vault via the relayer (sponsored/gasless)
+     * Sui uses implicit accounts - the vault address can receive funds without explicit creation.
+     */
+    const createSuiVault = async (): Promise<VaultCreationResult> => {
+        if (!suiClient) throw new Error('Sui client not initialized');
+        if (!identity?.keyHash) throw new Error('Not logged in');
+
+        setIsLoading(true);
+        try {
+            const result = await suiClient.createVaultViaRelayer(
+                identity.keyHash,
+                config.relayerUrl
+            );
+            
+            // Sui implicit accounts always exist
+            setSuiVaultExists(true);
+            
+            return result;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * Create an Aptos vault via the relayer (sponsored/gasless)
+     * Aptos requires an explicit on-chain vault creation via the spoke::create_vault entry function.
+     */
+    const createAptosVault = async (): Promise<VaultCreationResult> => {
+        if (!aptosClient) throw new Error('Aptos client not initialized');
+        if (!identity?.keyHash) throw new Error('Not logged in');
+
+        setIsLoading(true);
+        try {
+            const result = await aptosClient.createVaultViaRelayer(
+                identity.keyHash,
+                config.relayerUrl
+            );
+            
+            // Update vault exists state
+            setAptosVaultExists(true);
+            
+            return result;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * Create a Starknet vault via the relayer (sponsored/gasless)
+     * Starknet vault creation is async - requires Hub dispatch via custom bridge.
+     */
+    const createStarknetVault = async (): Promise<VaultCreationResult> => {
+        if (!starknetClient) throw new Error('Starknet client not initialized');
+        if (!identity?.keyHash) throw new Error('Not logged in');
+
+        setIsLoading(true);
+        try {
+            const result = await starknetClient.createVaultViaRelayer(
+                identity.keyHash,
+                config.relayerUrl
+            );
+            
+            // Note: Starknet vault creation is async via Hub dispatch
+            // The vault may not be immediately available
+            setStarknetVaultExists(true);
             
             return result;
         } finally {
@@ -1140,6 +1415,25 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 getSolanaReceiveAddress,
                 createSolanaVault,
                 solanaVaultExists,
+
+                // Multi-chain vault addresses (Sui, Aptos, Starknet)
+                suiVaultAddress,
+                aptosVaultAddress,
+                starknetVaultAddress,
+                getVaultAddressForChain,
+                multiChainVaultAddresses,
+
+                // Sui vault management
+                suiVaultExists,
+                createSuiVault,
+
+                // Aptos vault management
+                aptosVaultExists,
+                createAptosVault,
+
+                // Starknet vault management
+                starknetVaultExists,
+                createStarknetVault,
 
                 // Backup Passkey Management (Issue #22/#25)
                 hasBackupPasskey,
