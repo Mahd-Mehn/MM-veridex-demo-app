@@ -6,10 +6,11 @@ import { BalanceCard } from '@/components/BalanceDisplay';
 import { SolanaBalanceCard } from '@/components/SolanaBalanceDisplay';
 import { SendForm } from '@/components/SendForm';
 import { ReceiveModal } from '@/components/QRCode';
-import { ChainTabs, SUPPORTED_CHAINS, isSolanaChain, isEvmChain } from '@/components/ChainSelector';
+import { ChainTabs, SUPPORTED_CHAINS, isSolanaChain, isEvmChain, isSuiChain, isAptosChain, isStarknetChain } from '@/components/ChainSelector';
 import { SyncConfirmationModal } from '@/components/SyncConfirmationModal';
 import { SyncWarningBanner, SecuritySettings } from '@/components/SyncWarningBanner';
 import { SpendingWidget } from '@/components/SpendingWidget';
+import { SpendingSettings } from '@/components/SpendingSettings';
 import { needsSyncConfirmation, shouldShowWarningBanner, clearSyncStatus } from '@/lib/platformSync';
 import { config } from '@/lib/config';
 
@@ -50,6 +51,11 @@ export default function Home() {
     solanaBalance,
     isLoadingSolanaBalance,
     refreshSolanaBalance,
+    // Multi-chain vault addresses
+    suiVaultAddress,
+    aptosVaultAddress,
+    starknetVaultAddress,
+    getVaultAddressForChain,
     // Backup passkey (Issue #22/#25)
     hasBackupPasskey,
     isAddingBackupPasskey,
@@ -59,6 +65,8 @@ export default function Home() {
     isLoadingSpendingLimits,
     refreshSpendingLimits,
     unpauseVault,
+    setDailyLimit,
+    pauseVault,
   } = useVeridex();
 
   const [activeTab, setActiveTab] = useState<Tab>('wallet');
@@ -74,6 +82,7 @@ export default function Home() {
   // Sync confirmation modal state (Issue #25)
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showSecuritySettings, setShowSecuritySettings] = useState(false);
+  const [showSpendingSettings, setShowSpendingSettings] = useState(false);
 
   // Check for stored credential on mount
   useEffect(() => {
@@ -411,10 +420,16 @@ export default function Home() {
         )}
 
         {/* Vault Address Card */}
-        {(vaultAddress || solanaVaultAddress) && (
+        {(vaultAddress || solanaVaultAddress || suiVaultAddress || aptosVaultAddress || starknetVaultAddress) && (
           <div className={`mb-6 backdrop-blur-lg rounded-2xl p-6 border ${
             isSolanaChain(selectedChain) 
               ? 'bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border-purple-500/30' 
+              : isSuiChain(selectedChain)
+              ? 'bg-gradient-to-br from-cyan-900/30 to-teal-900/30 border-cyan-500/30'
+              : isAptosChain(selectedChain)
+              ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/30'
+              : isStarknetChain(selectedChain)
+              ? 'bg-gradient-to-br from-orange-900/30 to-pink-900/30 border-orange-500/30'
               : 'bg-white/10 border-white/20'
           }`}>
             <div className="flex items-center justify-between mb-4">
@@ -422,98 +437,156 @@ export default function Home() {
               <ChainTabs selectedChainId={selectedChain} onSelect={setSelectedChain} />
             </div>
             
-            {/* Chain-specific content */}
-            {isSolanaChain(selectedChain) ? (
-              // Solana Vault Content
-              <>
-                <p className="text-purple-200 font-mono text-sm break-all">{solanaVaultAddress || 'Not available'}</p>
-                
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {isLoadingSolanaBalance ? (
-                      <div className="animate-pulse h-5 w-20 bg-white/10 rounded" />
-                    ) : (
-                      <span className="text-white font-medium">
-                        {(solanaBalance?.sol ?? 0).toFixed(4)} SOL
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={refreshSolanaBalance}
-                      disabled={isLoadingSolanaBalance}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
-                      title="Refresh balance"
-                    >
-                      <svg 
-                        className={`w-4 h-4 text-purple-300 ${isLoadingSolanaBalance ? 'animate-spin' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (solanaVaultAddress) {
-                          navigator.clipboard.writeText(solanaVaultAddress);
-                          setSuccess('Solana address copied!');
-                        }
-                      }}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                      title="Copy address"
-                    >
-                      <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => window.open(`https://explorer.solana.com/address/${solanaVaultAddress}?cluster=devnet`, '_blank')}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                      title="View on Explorer"
-                    >
-                      <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>Ready to receive SOL</span>
-                </div>
-              </>
-            ) : (
-              // EVM Vault Content
-              <>
-                <p className="text-gray-400 font-mono text-sm break-all">{vaultAddress}</p>
-                
-                {/* Show subtle loading indicator while vaults are being created in background */}
-                {isCreatingSponsoredVaults && (
-                  <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    <span>Setting up your wallet...</span>
-                  </div>
-                )}
+            {/* Chain-specific vault address display */}
+            {(() => {
+              const currentVaultAddress = getVaultAddressForChain(selectedChain);
+              const chainInfo = SUPPORTED_CHAINS.find(c => c.id === selectedChain);
+              const isNonEvm = isSolanaChain(selectedChain) || isSuiChain(selectedChain) || isAptosChain(selectedChain) || isStarknetChain(selectedChain);
+              
+              // Get explorer URL for non-EVM chains
+              const getExplorerUrl = () => {
+                if (!currentVaultAddress) return null;
+                if (isSolanaChain(selectedChain)) {
+                  return `https://explorer.solana.com/address/${currentVaultAddress}?cluster=devnet`;
+                }
+                if (isSuiChain(selectedChain)) {
+                  return `https://suiscan.xyz/testnet/account/${currentVaultAddress}`;
+                }
+                if (isAptosChain(selectedChain)) {
+                  return `https://explorer.aptoslabs.com/account/${currentVaultAddress}?network=testnet`;
+                }
+                if (isStarknetChain(selectedChain)) {
+                  return `https://sepolia.starkscan.co/contract/${currentVaultAddress}`;
+                }
+                return chainInfo?.explorerUrl ? `${chainInfo.explorerUrl}/address/${currentVaultAddress}` : null;
+              };
 
-                {/* Show vault status - green checkmark when ready */}
-                {vaultDeployed && !isCreatingSponsoredVaults && (
-                  <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Ready to send & receive</span>
-                  </div>
-                )}
-              </>
-            )}
+              const textColorClass = isSolanaChain(selectedChain) ? 'text-purple-200'
+                : isSuiChain(selectedChain) ? 'text-cyan-200'
+                : isAptosChain(selectedChain) ? 'text-green-200'
+                : isStarknetChain(selectedChain) ? 'text-orange-200'
+                : 'text-gray-400';
+
+              const iconColorClass = isSolanaChain(selectedChain) ? 'text-purple-300'
+                : isSuiChain(selectedChain) ? 'text-cyan-300'
+                : isAptosChain(selectedChain) ? 'text-green-300'
+                : isStarknetChain(selectedChain) ? 'text-orange-300'
+                : 'text-gray-300';
+
+              return (
+                <>
+                  <p className={`${textColorClass} font-mono text-sm break-all`}>
+                    {currentVaultAddress || 'Not available - vault not yet created'}
+                  </p>
+
+                  {/* Non-EVM chain specific content */}
+                  {isNonEvm && currentVaultAddress && (
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {isSolanaChain(selectedChain) && (
+                          isLoadingSolanaBalance ? (
+                            <div className="animate-pulse h-5 w-20 bg-white/10 rounded" />
+                          ) : (
+                            <span className="text-white font-medium">
+                              {(solanaBalance?.sol ?? 0).toFixed(4)} SOL
+                            </span>
+                          )
+                        )}
+                        {isSuiChain(selectedChain) && (
+                          <span className="text-white font-medium text-sm">SUI Testnet</span>
+                        )}
+                        {isAptosChain(selectedChain) && (
+                          <span className="text-white font-medium text-sm">Aptos Testnet</span>
+                        )}
+                        {isStarknetChain(selectedChain) && (
+                          <span className="text-white font-medium text-sm">Starknet Sepolia</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isSolanaChain(selectedChain) && (
+                          <button
+                            onClick={refreshSolanaBalance}
+                            disabled={isLoadingSolanaBalance}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                            title="Refresh balance"
+                          >
+                            <svg 
+                              className={`w-4 h-4 ${iconColorClass} ${isLoadingSolanaBalance ? 'animate-spin' : ''}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (currentVaultAddress) {
+                              navigator.clipboard.writeText(currentVaultAddress);
+                              setSuccess(`${chainInfo?.name || 'Address'} copied!`);
+                            }
+                          }}
+                          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                          title="Copy address"
+                        >
+                          <svg className={`w-4 h-4 ${iconColorClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        {getExplorerUrl() && (
+                          <button
+                            onClick={() => window.open(getExplorerUrl()!, '_blank')}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                            title="View on Explorer"
+                          >
+                            <svg className={`w-4 h-4 ${iconColorClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ready status for non-EVM chains */}
+                  {isNonEvm && currentVaultAddress && (
+                    <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Ready to receive {chainInfo?.nativeToken || 'tokens'}</span>
+                    </div>
+                  )}
+
+                  {/* EVM chain content */}
+                  {!isNonEvm && (
+                    <>
+                      {/* Show subtle loading indicator while vaults are being created in background */}
+                      {isCreatingSponsoredVaults && (
+                        <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          <span>Setting up your wallet...</span>
+                        </div>
+                      )}
+
+                      {/* Show vault status - green checkmark when ready */}
+                      {vaultDeployed && !isCreatingSponsoredVaults && (
+                        <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Ready to send & receive</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -527,7 +600,7 @@ export default function Home() {
               tokenSymbol="ETH"
               onRefresh={refreshSpendingLimits}
               onUnpause={isConnected ? unpauseVault : undefined}
-              onAdjustLimits={() => setShowSecuritySettings(true)}
+              onAdjustLimits={() => setShowSpendingSettings(true)}
             />
           </div>
         )}
@@ -811,7 +884,7 @@ export default function Home() {
         <ReceiveModal
           isOpen={showReceiveModal}
           onClose={() => setShowReceiveModal(false)}
-          address={(isSolanaChain(selectedChain) ? solanaVaultAddress : vaultAddress) || ''}
+          address={getVaultAddressForChain(selectedChain) || ''}
           chainName={SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name || 'Unknown'}
           onCopy={() => setSuccess('Address copied!')}
           isSolana={isSolanaChain(selectedChain)}
@@ -841,6 +914,33 @@ export default function Home() {
                 onAddBackupPasskey={handleAddBackupPasskey}
                 onUpdateSyncStatus={handleUpdateSyncStatus}
                 hasBackupPasskey={hasBackupPasskey}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Spending Settings Modal (Issue #27) */}
+        {showSpendingSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-8">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSpendingSettings(false)} />
+            <div className="relative w-full max-w-lg mx-4">
+              <button
+                onClick={() => setShowSpendingSettings(false)}
+                className="absolute -top-2 -right-2 p-2 bg-slate-800 rounded-full border border-white/10 text-gray-400 hover:text-white z-10"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <SpendingSettings
+                limits={spendingLimits || undefined}
+                isLoading={isLoadingSpendingLimits}
+                tokenDecimals={18}
+                tokenSymbol="ETH"
+                onSetDailyLimit={isConnected ? setDailyLimit : undefined}
+                onPauseVault={isConnected ? pauseVault : undefined}
+                onUnpauseVault={isConnected ? unpauseVault : undefined}
+                onRefresh={refreshSpendingLimits}
               />
             </div>
           </div>
