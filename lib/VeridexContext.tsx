@@ -336,6 +336,97 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                             setIsCreatingSponsoredVaults(false);
                         }
                     }
+
+                    // Auto-create vaults on non-EVM chains via relayer
+                    // These chains use their own vault creation endpoints
+                    const keyHash = savedCred.keyHash;
+                    const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL;
+                    
+                    if (relayerUrl && keyHash) {
+                        console.log('Checking vaults on Solana, Sui, Aptos, Starknet...');
+                        
+                        // Create vaults in parallel for chains that don't have them
+                        const vaultCreationPromises: Promise<void>[] = [];
+                        
+                        // Solana vault auto-creation
+                        if (solClient) {
+                            vaultCreationPromises.push((async () => {
+                                try {
+                                    const vaultInfo = await solClient.getVaultViaRelayer(keyHash, relayerUrl);
+                                    if (!vaultInfo.exists) {
+                                        console.log('Creating Solana vault...');
+                                        const result = await solClient.createVaultViaRelayer(keyHash, relayerUrl);
+                                        console.log('Solana vault created:', result.address);
+                                        setSolanaVaultExists(true);
+                                    } else {
+                                        setSolanaVaultExists(true);
+                                    }
+                                } catch (error) {
+                                    console.warn('Solana vault auto-creation failed:', error);
+                                }
+                            })());
+                        }
+                        
+                        // Sui vault auto-creation
+                        if (suiClientInstance) {
+                            vaultCreationPromises.push((async () => {
+                                try {
+                                    const vaultInfo = await suiClientInstance.getVaultViaRelayer(keyHash, relayerUrl);
+                                    if (!vaultInfo.exists) {
+                                        console.log('Creating Sui vault...');
+                                        const result = await suiClientInstance.createVaultViaRelayer(keyHash, relayerUrl);
+                                        console.log('Sui vault created:', result.address);
+                                        setSuiVaultExists(true);
+                                    } else {
+                                        setSuiVaultExists(true);
+                                    }
+                                } catch (error) {
+                                    console.warn('Sui vault auto-creation failed:', error);
+                                }
+                            })());
+                        }
+                        
+                        // Aptos vault auto-creation
+                        if (aptosClientInstance) {
+                            vaultCreationPromises.push((async () => {
+                                try {
+                                    const vaultInfo = await aptosClientInstance.getVaultViaRelayer(keyHash, relayerUrl);
+                                    if (!vaultInfo.exists) {
+                                        console.log('Creating Aptos vault...');
+                                        const result = await aptosClientInstance.createVaultViaRelayer(keyHash, relayerUrl);
+                                        console.log('Aptos vault created:', result.address);
+                                        setAptosVaultExists(true);
+                                    } else {
+                                        setAptosVaultExists(true);
+                                    }
+                                } catch (error) {
+                                    console.warn('Aptos vault auto-creation failed:', error);
+                                }
+                            })());
+                        }
+                        
+                        // Starknet vault auto-creation
+                        if (starknetClientInstance) {
+                            vaultCreationPromises.push((async () => {
+                                try {
+                                    const vaultInfo = await starknetClientInstance.getVaultViaRelayer(keyHash, relayerUrl);
+                                    if (!vaultInfo.exists) {
+                                        console.log('Creating Starknet vault...');
+                                        const result = await starknetClientInstance.createVaultViaRelayer(keyHash, relayerUrl);
+                                        console.log('Starknet vault created (async via Hub dispatch):', result.address);
+                                        setStarknetVaultExists(true);
+                                    } else {
+                                        setStarknetVaultExists(true);
+                                    }
+                                } catch (error) {
+                                    console.warn('Starknet vault auto-creation failed:', error);
+                                }
+                            })());
+                        }
+                        
+                        // Wait for all vault creations (don't block on failures)
+                        await Promise.allSettled(vaultCreationPromises);
+                    }
                 }
             } catch (error) {
                 console.error('SDK initialization error:', error);
@@ -507,6 +598,102 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 setVaultDeployed(false);
             }
         }
+    };
+
+    /**
+     * Auto-create vaults on non-EVM chains via relayer
+     * This is called after login or when a returning user loads their identity
+     */
+    const autoCreateNonEvmVaults = async (keyHash: string) => {
+        const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL;
+        if (!relayerUrl || !keyHash) {
+            console.log('Skipping non-EVM vault auto-creation: missing relayer URL or keyHash');
+            return;
+        }
+
+        console.log('Auto-creating vaults on Solana, Sui, Aptos, Starknet...');
+        const vaultCreationPromises: Promise<void>[] = [];
+
+        // Solana vault auto-creation
+        if (solanaClient) {
+            vaultCreationPromises.push((async () => {
+                try {
+                    const vaultInfo = await solanaClient.getVaultViaRelayer(keyHash, relayerUrl);
+                    if (!vaultInfo.exists) {
+                        console.log('Creating Solana vault...');
+                        const result = await solanaClient.createVaultViaRelayer(keyHash, relayerUrl);
+                        console.log('Solana vault created:', result.address);
+                        setSolanaVaultExists(true);
+                    } else {
+                        setSolanaVaultExists(true);
+                    }
+                } catch (error) {
+                    console.warn('Solana vault auto-creation failed:', error);
+                }
+            })());
+        }
+
+        // Sui vault auto-creation
+        if (suiClient) {
+            vaultCreationPromises.push((async () => {
+                try {
+                    const vaultInfo = await suiClient.getVaultViaRelayer(keyHash, relayerUrl);
+                    if (!vaultInfo.exists) {
+                        console.log('Creating Sui vault...');
+                        const result = await suiClient.createVaultViaRelayer(keyHash, relayerUrl);
+                        console.log('Sui vault created:', result.address);
+                        setSuiVaultExists(true);
+                    } else {
+                        setSuiVaultExists(true);
+                    }
+                } catch (error) {
+                    console.warn('Sui vault auto-creation failed:', error);
+                }
+            })());
+        }
+
+        // Aptos vault auto-creation
+        if (aptosClient) {
+            vaultCreationPromises.push((async () => {
+                try {
+                    const vaultInfo = await aptosClient.getVaultViaRelayer(keyHash, relayerUrl);
+                    if (!vaultInfo.exists) {
+                        console.log('Creating Aptos vault...');
+                        const result = await aptosClient.createVaultViaRelayer(keyHash, relayerUrl);
+                        console.log('Aptos vault created:', result.address);
+                        setAptosVaultExists(true);
+                    } else {
+                        setAptosVaultExists(true);
+                    }
+                } catch (error) {
+                    console.warn('Aptos vault auto-creation failed:', error);
+                }
+            })());
+        }
+
+        // Starknet vault auto-creation
+        if (starknetClient) {
+            vaultCreationPromises.push((async () => {
+                try {
+                    const vaultInfo = await starknetClient.getVaultViaRelayer(keyHash, relayerUrl);
+                    if (!vaultInfo.exists) {
+                        console.log('Creating Starknet vault...');
+                        const result = await starknetClient.createVaultViaRelayer(keyHash, relayerUrl);
+                        console.log('Starknet vault created (async via Hub dispatch):', result.address);
+                        setStarknetVaultExists(true);
+                    } else {
+                        setStarknetVaultExists(true);
+                    }
+                } catch (error) {
+                    console.warn('Starknet vault auto-creation failed:', error);
+                }
+            })());
+        }
+
+        // Wait for all vault creations (don't block on failures)
+        const results = await Promise.allSettled(vaultCreationPromises);
+        const fulfilled = results.filter(r => r.status === 'fulfilled').length;
+        console.log(`Non-EVM vault auto-creation complete: ${fulfilled}/${results.length} succeeded`);
     };
 
     // ========================================================================
@@ -1104,6 +1291,9 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     setIsCreatingSponsoredVaults(false);
                 }
             }
+
+            // Auto-create vaults on non-EVM chains via relayer
+            await autoCreateNonEvmVaults(cred.keyHash);
         } catch (error) {
             console.error('Registration error:', error);
             throw error;
@@ -1155,6 +1345,9 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     setIsCreatingSponsoredVaults(false);
                 }
             }
+
+            // Auto-create vaults on non-EVM chains via relayer
+            await autoCreateNonEvmVaults(cred.keyHash);
         } catch (error) {
             console.error('Login error:', error);
             throw error;
