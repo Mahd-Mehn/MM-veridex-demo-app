@@ -9,6 +9,7 @@ import { ReceiveModal } from '@/components/QRCode';
 import { ChainTabs, SUPPORTED_CHAINS, isSolanaChain, isEvmChain } from '@/components/ChainSelector';
 import { SyncConfirmationModal } from '@/components/SyncConfirmationModal';
 import { SyncWarningBanner, SecuritySettings } from '@/components/SyncWarningBanner';
+import { SpendingWidget } from '@/components/SpendingWidget';
 import { needsSyncConfirmation, shouldShowWarningBanner, clearSyncStatus } from '@/lib/platformSync';
 import { config } from '@/lib/config';
 
@@ -53,6 +54,11 @@ export default function Home() {
     hasBackupPasskey,
     isAddingBackupPasskey,
     addBackupPasskey,
+    // Issue #27: Spending Limits
+    spendingLimits,
+    isLoadingSpendingLimits,
+    refreshSpendingLimits,
+    unpauseVault,
   } = useVeridex();
 
   const [activeTab, setActiveTab] = useState<Tab>('wallet');
@@ -508,6 +514,21 @@ export default function Home() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* Spending Limits Widget (Issue #27) - Only show for EVM vaults when deployed */}
+        {vaultDeployed && !isSolanaChain(selectedChain) && (
+          <div className="mb-6">
+            <SpendingWidget
+              limits={spendingLimits || undefined}
+              isLoading={isLoadingSpendingLimits}
+              tokenDecimals={18}
+              tokenSymbol="ETH"
+              onRefresh={refreshSpendingLimits}
+              onUnpause={isConnected ? unpauseVault : undefined}
+              onAdjustLimits={() => setShowSecuritySettings(true)}
+            />
           </div>
         )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { 
     VeridexSDK, 
     PasskeyCredential, 
@@ -21,6 +21,12 @@ import {
     CrossChainResult,
     MultiChainVaultResult,
     SponsoredVaultResult,
+    // Issue #26: Human-Readable Transaction Summaries
+    TransactionSummary,
+    // Issue #27: Spending Limits
+    SpendingLimits,
+    FormattedSpendingLimits,
+    LimitCheckResult,
 } from '@veridex/sdk';
 import { EVMClient } from '@veridex/sdk/chains/evm';
 import { SolanaClient } from '@veridex/sdk/chains/solana';
@@ -111,6 +117,19 @@ interface VeridexContextType {
     isAddingBackupPasskey: boolean;
     addBackupPasskey: () => Promise<void>;
     checkBackupPasskeyStatus: () => Promise<void>;
+
+    // Issue #26: Human-Readable Transaction Summaries
+    parseTransaction: (prepared: PreparedTransfer | PreparedBridge) => Promise<TransactionSummary>;
+    
+    // Issue #27: Spending Limits
+    spendingLimits: SpendingLimits | null;
+    formattedSpendingLimits: FormattedSpendingLimits | null;
+    isLoadingSpendingLimits: boolean;
+    refreshSpendingLimits: () => Promise<void>;
+    checkTransactionLimit: (amount: bigint) => Promise<LimitCheckResult | null>;
+    setDailyLimit: (newLimit: bigint) => Promise<void>;
+    pauseVault: () => Promise<void>;
+    unpauseVault: () => Promise<void>;
 }
 
 const VeridexContext = createContext<VeridexContextType | undefined>(undefined);
@@ -149,6 +168,11 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     // Backup passkey state (Issue #22/#25)
     const [hasBackupPasskey, setHasBackupPasskey] = useState<boolean>(false);
     const [isAddingBackupPasskey, setIsAddingBackupPasskey] = useState<boolean>(false);
+
+    // Issue #27: Spending Limits state
+    const [spendingLimits, setSpendingLimits] = useState<SpendingLimits | null>(null);
+    const [formattedSpendingLimits, setFormattedSpendingLimits] = useState<FormattedSpendingLimits | null>(null);
+    const [isLoadingSpendingLimits, setIsLoadingSpendingLimits] = useState<boolean>(false);
 
     // Initialize SDK on mount
     useEffect(() => {
@@ -356,6 +380,130 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         if (!sdk) return [];
         return sdk.getTokenList();
     };
+
+    // ========================================================================
+    // Issue #26: Human-Readable Transaction Summaries
+    // ========================================================================
+
+    /**
+     * Parse a prepared transaction into a human-readable summary
+     * Includes risk warnings, formatted amounts, and action descriptions
+     */
+    const parseTransaction = useCallback(async (
+        prepared: PreparedTransfer | PreparedBridge
+    ): Promise<TransactionSummary> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        return await sdk.transactionParser.parse(prepared, vaultAddress || undefined);
+    }, [sdk, vaultAddress]);
+
+    // ========================================================================
+    // Issue #27: Spending Limits
+    // ========================================================================
+
+    /**
+     * Refresh spending limits for the current vault
+     */
+    const refreshSpendingLimits = useCallback(async () => {
+        if (!sdk || !vaultAddress) return;
+        
+        setIsLoadingSpendingLimits(true);
+        try {
+            const chainId = config.wormholeChainId;
+            const limits = await sdk.spendingLimits.getSpendingLimits(vaultAddress, chainId);
+            setSpendingLimits(limits);
+            
+            const formatted = await sdk.spendingLimits.getFormattedSpendingLimits(
+                vaultAddress, 
+                chainId,
+                { decimals: 18, symbol: 'ETH' }
+            );
+            setFormattedSpendingLimits(formatted);
+        } catch (error) {
+            console.error('Error fetching spending limits:', error);
+        } finally {
+            setIsLoadingSpendingLimits(false);
+        }
+    }, [sdk, vaultAddress]);
+
+    /**
+     * Check if a transaction amount is within spending limits
+     */
+    const checkTransactionLimit = useCallback(async (amount: bigint): Promise<LimitCheckResult | null> => {
+        if (!sdk || !vaultAddress) return null;
+        
+        const chainId = config.wormholeChainId;
+        return await sdk.spendingLimits.checkTransactionLimit(vaultAddress, chainId, amount);
+    }, [sdk, vaultAddress]);
+
+    /**
+     * Set a new daily spending limit (requires passkey signature)
+     */
+    const setDailyLimit = useCallback(async (newLimit: bigint): Promise<void> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        if (!signer) throw new Error('Wallet not connected');
+        if (!vaultAddress) throw new Error('No vault address');
+
+        setIsLoading(true);
+        try {
+            // Prepare and execute the daily limit update
+            const prepared = await sdk.prepareSetDailyLimit(newLimit);
+            await sdk.executeTransfer(prepared, signer);
+
+            // Refresh limits after update
+            await refreshSpendingLimits();
+        } finally {
+            setIsLoading(false);
+        }
+    }, [sdk, signer, vaultAddress, refreshSpendingLimits]);
+
+    /**
+     * Pause the vault (emergency freeze)
+     */
+    const pauseVault = useCallback(async (): Promise<void> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        if (!signer) throw new Error('Wallet not connected');
+        if (!vaultAddress) throw new Error('No vault address');
+
+        setIsLoading(true);
+        try {
+            // Prepare and execute the pause action
+            const prepared = await sdk.preparePauseVault();
+            await sdk.executeTransfer(prepared, signer);
+
+            // Refresh limits after pause
+            await refreshSpendingLimits();
+        } finally {
+            setIsLoading(false);
+        }
+    }, [sdk, signer, vaultAddress, refreshSpendingLimits]);
+
+    /**
+     * Unpause the vault
+     */
+    const unpauseVault = useCallback(async (): Promise<void> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        if (!signer) throw new Error('Wallet not connected');
+        if (!vaultAddress) throw new Error('No vault address');
+
+        setIsLoading(true);
+        try {
+            // Prepare and execute the unpause action
+            const prepared = await sdk.prepareUnpauseVault();
+            await sdk.executeTransfer(prepared, signer);
+
+            // Refresh limits after unpause
+            await refreshSpendingLimits();
+        } finally {
+            setIsLoading(false);
+        }
+    }, [sdk, signer, vaultAddress, refreshSpendingLimits]);
+
+    // Auto-refresh spending limits when vault address changes
+    useEffect(() => {
+        if (vaultAddress && vaultDeployed) {
+            refreshSpendingLimits();
+        }
+    }, [vaultAddress, vaultDeployed, refreshSpendingLimits]);
 
     // ========================================================================
     // Solana Balance Methods
@@ -998,6 +1146,19 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 isAddingBackupPasskey,
                 addBackupPasskey,
                 checkBackupPasskeyStatus,
+
+                // Issue #26: Human-Readable Transaction Summaries
+                parseTransaction,
+
+                // Issue #27: Spending Limits
+                spendingLimits,
+                formattedSpendingLimits,
+                isLoadingSpendingLimits,
+                refreshSpendingLimits,
+                checkTransactionLimit,
+                setDailyLimit,
+                pauseVault,
+                unpauseVault,
             }}
         >
             {children}
