@@ -11,6 +11,9 @@ import { SyncConfirmationModal } from '@/components/SyncConfirmationModal';
 import { SyncWarningBanner, SecuritySettings } from '@/components/SyncWarningBanner';
 import { SpendingWidget } from '@/components/SpendingWidget';
 import { SpendingSettings } from '@/components/SpendingSettings';
+import { ShareCard } from '@/components/ShareCard';
+import { SocialShareModal } from '@/components/SocialShareModal';
+import { TestnetFaucet } from '@/components/TestnetFaucet';
 import { needsSyncConfirmation, shouldShowWarningBanner, clearSyncStatus } from '@/lib/platformSync';
 import { config } from '@/lib/config';
 
@@ -83,6 +86,11 @@ export default function Home() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showSecuritySettings, setShowSecuritySettings] = useState(false);
   const [showSpendingSettings, setShowSpendingSettings] = useState(false);
+  // Viral share feature
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUsername, setShareUsername] = useState('');
+  const [pendingShareAfterSync, setPendingShareAfterSync] = useState(false);
 
   // Check for stored credential on mount
   useEffect(() => {
@@ -104,7 +112,11 @@ export default function Home() {
     setError('');
     setSuccess('');
     try {
-      await register(username, displayName);
+      const cleanUsername = username.trim();
+      const cleanDisplayName = displayName.trim() || cleanUsername;
+      setShareUsername(cleanUsername);
+      setPendingShareAfterSync(true);
+      await register(cleanUsername, cleanDisplayName);
       setSuccess('Passkey registered successfully!');
       setUsername('');
       setDisplayName('');
@@ -181,18 +193,66 @@ export default function Home() {
   // Show onboarding if not registered
   if (!isRegistered) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          {/* Logo/Header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900">
+        {/* Hero Section */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-lg w-full">
+            {/* Logo/Header */}
+            <div className="text-center mb-8">
+              {/* Animated Logo */}
+              <div className="relative w-24 h-24 mx-auto mb-6">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 animate-pulse opacity-50 blur-xl" />
+                <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+              
+              <h1 className="text-4xl font-bold text-white mb-3 leading-tight">
+                Create your first passkey wallet in 10 seconds
+              </h1>
+              <p className="text-xl text-gray-300 mb-4">
+                No seed phrase. No email. Just FaceID / TouchID.
+              </p>
+              
+              {/* Value Props */}
+              <div className="flex flex-wrap justify-center gap-3 mb-6">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full text-green-300 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  No seed phrase
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Zero gas fees
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-full text-purple-300 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  6 chains, 1 identity
+                </span>
+              </div>
+              
+              {/* Demo Video Link */}
+              <a 
+                href="https://youtu.be/CgSvFqrVGAw"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition text-sm group"
+              >
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                Watch the 30-second demo
+              </a>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Veridex Wallet</h1>
-            <p className="text-gray-400">Passkey-powered cross-chain wallet</p>
-          </div>
 
           {/* Error/Success Messages */}
           {error && (
@@ -206,13 +266,21 @@ export default function Home() {
             </div>
           )}
 
-          {/* Welcome Back - Show when credential exists */}
-          {hasExistingCredential && (
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 mb-4">
-              <h2 className="text-xl font-bold text-white mb-2">Welcome Back</h2>
-              <p className="text-gray-400 text-sm mb-6">
-                Sign in with your passkey to access your wallet
-              </p>
+          {/* Main Actions - Always show both options */}
+          <div className="space-y-4">
+            {/* Sign In with Existing Passkey - Primary CTA */}
+            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">I have a passkey wallet</h2>
+                  <p className="text-gray-400 text-sm">Sign in with FaceID / TouchID</p>
+                </div>
+              </div>
               <button
                 onClick={handleLogin}
                 disabled={loading}
@@ -229,78 +297,106 @@ export default function Home() {
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     Sign In with Passkey
                   </>
                 )}
               </button>
-              <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                <button
-                  onClick={() => setHasExistingCredential(false)}
-                  className="text-gray-400 hover:text-white text-sm transition"
-                >
-                  Create a new wallet instead
-                </button>
-              </div>
             </div>
-          )}
 
-          {/* Create New Wallet */}
-          {!hasExistingCredential && (
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-              <h2 className="text-xl font-bold text-white mb-2">Create Your Wallet</h2>
-              <p className="text-gray-400 text-sm mb-6">
-                Set up a passkey to secure your cross-chain wallet
-              </p>
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="Enter a username"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Display Name
-                  </label>
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="Your name"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
-                >
-                  {loading ? 'Creating...' : 'Create Wallet'}
-                </button>
-              </form>
-              {hasStoredCredential() && (
-                <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                  <button
-                    onClick={() => setHasExistingCredential(true)}
-                    className="text-gray-400 hover:text-white text-sm transition"
-                  >
-                    ← Sign in with existing passkey
-                  </button>
-                </div>
-              )}
+            {/* Divider */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-gray-500 text-sm">or</span>
+              <div className="flex-1 h-px bg-white/10" />
             </div>
-          )}
+
+            {/* Create New Wallet - Secondary option, collapsible */}
+            {!hasExistingCredential ? (
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Create new wallet</h2>
+                    <p className="text-gray-400 text-sm">First time? Set up in 10 seconds</p>
+                  </div>
+                </div>
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Choose a username
+                    </label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="e.g. satoshi"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all disabled:opacity-50 border border-white/10"
+                  >
+                    {loading ? 'Creating...' : 'Create Wallet'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <button
+                onClick={() => setHasExistingCredential(false)}
+                className="w-full py-4 bg-white/5 text-gray-300 font-medium rounded-xl hover:bg-white/10 transition-all border border-white/10 flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create a new wallet instead
+              </button>
+            )}
+          </div>
+          
+          {/* Chain Badges */}
+          <div className="mt-8 text-center">
+            <p className="text-gray-500 text-xs mb-3">Instant vaults on</p>
+            <div className="flex justify-center gap-2 flex-wrap">
+              {[
+                { name: 'Base', icon: '🔵' },
+                { name: 'Optimism', icon: '🔴' },
+                { name: 'Arbitrum', icon: '🔷' },
+                { name: 'Solana', icon: '🟣' },
+                { name: 'Aptos', icon: '🟢' },
+                { name: 'Sui', icon: '🔵' },
+              ].map(chain => (
+                <span key={chain.name} className="px-2 py-1 bg-white/5 rounded text-gray-400 text-xs flex items-center gap-1">
+                  <span>{chain.icon}</span>
+                  <span>{chain.name}</span>
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
+        </div>
+        
+        {/* Footer */}
+        <footer className="p-4 text-center">
+          <p className="text-gray-500 text-sm">
+            Built with ❤️ using{' '}
+            <a href="https://www.w3.org/TR/webauthn/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+              WebAuthn
+            </a>
+            {' '}+{' '}
+            <a href="https://wormhole.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+              Wormhole
+            </a>
+          </p>
+        </footer>
       </div>
     );
   }
@@ -606,7 +702,7 @@ export default function Home() {
         )}
 
         {/* Action Buttons - Always show when registered */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-4 gap-3 mb-6">
           <button
             onClick={() => {
               // Check for appropriate address based on chain
@@ -664,6 +760,20 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             Activity
+          </button>
+          {/* Share Button - Viral Feature */}
+          <button
+            onClick={() => {
+              const currentUsername = credential?.credentialId ? credential.credentialId.slice(0, 8) : 'anon';
+              setShareUsername(currentUsername);
+              setShowShareCard(true);
+            }}
+            className="py-4 rounded-xl font-medium transition flex flex-col items-center gap-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 hover:from-purple-500/30 hover:to-pink-500/30 border border-pink-500/30"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Share
           </button>
         </div>
 
@@ -726,6 +836,19 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Testnet Faucet - Show when vault is ready but balance is low */}
+            {vaultAddress && vaultDeployed && isEvmChain(selectedChain) && (
+              <TestnetFaucet
+                vaultAddress={vaultAddress}
+                chainName={SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name || 'Base Sepolia'}
+                onSuccess={() => {
+                  setSuccess('Address copied! Paste it in the faucet to claim tokens.');
+                  // Refresh balances after a delay to pick up new tokens
+                  setTimeout(() => refreshBalances(), 5000);
+                }}
+              />
             )}
           </div>
         )}
@@ -893,8 +1016,62 @@ export default function Home() {
         {/* Sync Confirmation Modal (Issue #25) */}
         <SyncConfirmationModal
           isOpen={showSyncModal}
-          onComplete={() => setShowSyncModal(false)}
+          onComplete={() => {
+            setShowSyncModal(false);
+            if (pendingShareAfterSync) {
+              setShowShareCard(true);
+              setPendingShareAfterSync(false);
+            }
+          }}
           onAddBackupPasskey={handleAddBackupPasskey}
+        />
+
+        {/* Viral Share Card Overlay */}
+        {showShareCard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setShowShareCard(false)}
+            />
+            <div className="relative w-full max-w-md">
+              <button
+                onClick={() => setShowShareCard(false)}
+                className="absolute -top-2 -right-2 p-2 bg-slate-800 rounded-full border border-white/10 text-gray-400 hover:text-white z-10"
+                aria-label="Close"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <ShareCard
+                username={shareUsername || 'anon'}
+                vaultAddresses={{
+                  base: getVaultAddressForChain(10004) ?? vaultAddress ?? null,
+                  optimism: getVaultAddressForChain(10005) ?? null,
+                  arbitrum: getVaultAddressForChain(10003) ?? null,
+                  solana: solanaVaultAddress ?? null,
+                  sui: suiVaultAddress ?? null,
+                  aptos: aptosVaultAddress ?? null,
+                }}
+                onShare={() => setShowShareModal(true)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Social Share Modal */}
+        <SocialShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          username={shareUsername || 'anon'}
+          vaultAddresses={{
+            base: getVaultAddressForChain(10004) ?? vaultAddress ?? null,
+            optimism: getVaultAddressForChain(10005) ?? null,
+            arbitrum: getVaultAddressForChain(10003) ?? null,
+            solana: solanaVaultAddress ?? null,
+            sui: suiVaultAddress ?? null,
+            aptos: aptosVaultAddress ?? null,
+          }}
         />
 
         {/* Security Settings Modal (Issue #25) */}

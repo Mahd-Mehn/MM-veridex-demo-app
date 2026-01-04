@@ -23,7 +23,8 @@ export const SUPPORTED_CHAINS: ChainOption[] = [
     { id: 1, name: 'Solana Devnet', symbol: 'SOL', color: 'from-purple-500 to-cyan-400', isEvm: false, nativeToken: 'SOL', explorerUrl: 'https://explorer.solana.com' },
     { id: 21, name: 'Sui Testnet', symbol: 'SUI', color: 'from-cyan-500 to-teal-500', isEvm: false, nativeToken: 'SUI', explorerUrl: 'https://suiscan.xyz/testnet' },
     { id: 22, name: 'Aptos Testnet', symbol: 'APT', color: 'from-green-500 to-emerald-600', isEvm: false, nativeToken: 'APT', explorerUrl: 'https://explorer.aptoslabs.com' },
-    { id: 50001, name: 'Starknet Sepolia', symbol: 'STRK', color: 'from-orange-500 to-pink-600', isEvm: false, nativeToken: 'ETH', explorerUrl: 'https://sepolia.starkscan.co' },
+    // Starknet removed for now - will be re-enabled once fully integrated
+    // { id: 50001, name: 'Starknet Sepolia', symbol: 'STRK', color: 'from-orange-500 to-pink-600', isEvm: false, nativeToken: 'ETH', explorerUrl: 'https://sepolia.starkscan.co' },
 ];
 
 /** Helper to check if a chain is Solana */
