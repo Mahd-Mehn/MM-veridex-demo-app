@@ -92,8 +92,13 @@ interface VeridexContextType {
     
     // Phase 2: Balances
     vaultBalances: PortfolioBalance | null;
+    /** Balances per chain (keyed by Wormhole chain ID) */
+    chainBalances: Record<number, PortfolioBalance | null>;
     isLoadingBalances: boolean;
+    /** Refresh balances for the hub chain (Base) */
     refreshBalances: () => Promise<void>;
+    /** Refresh balances for a specific chain by Wormhole chain ID */
+    refreshBalancesForChain: (wormholeChainId: number) => Promise<void>;
     getTokenBalance: (tokenAddress: string) => Promise<TokenBalance>;
     getTokenList: () => TokenInfo[];
     
@@ -184,6 +189,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     
     // Phase 2 state
     const [vaultBalances, setVaultBalances] = useState<PortfolioBalance | null>(null);
+    const [chainBalances, setChainBalances] = useState<Record<number, PortfolioBalance | null>>({});
     const [isLoadingBalances, setIsLoadingBalances] = useState<boolean>(false);
     const [receiveAddress, setReceiveAddress] = useState<ReceiveAddress | null>(null);
     const [pendingTransactions, setPendingTransactions] = useState<TransactionState[]>([]);
@@ -700,6 +706,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     // Phase 2: Balance Methods
     // ========================================================================
 
+    /**
+     * Refresh balances for the hub chain (Base Sepolia)
+     * This also updates the vaultBalances state for backward compatibility
+     */
     const refreshBalances = async () => {
         if (!sdk || !vaultAddress) return;
         
@@ -707,8 +717,41 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         try {
             const balances = await sdk.getVaultBalances(true);
             setVaultBalances(balances);
+            // Also update chainBalances for hub chain
+            setChainBalances(prev => ({
+                ...prev,
+                [config.wormholeChainId]: balances,
+            }));
         } catch (error) {
             console.error('Error fetching balances:', error);
+        } finally {
+            setIsLoadingBalances(false);
+        }
+    };
+
+    /**
+     * Refresh balances for a specific chain by Wormhole chain ID
+     * Each EVM chain has its own vault address and balances
+     */
+    const refreshBalancesForChain = async (wormholeChainId: number) => {
+        if (!sdk) return;
+        
+        setIsLoadingBalances(true);
+        try {
+            // Use the new SDK method that properly computes per-chain vault addresses
+            const balances = await sdk.getVaultBalancesForChain(wormholeChainId, true);
+            
+            setChainBalances(prev => ({
+                ...prev,
+                [wormholeChainId]: balances,
+            }));
+            
+            // If this is the hub chain, also update vaultBalances for backward compatibility
+            if (wormholeChainId === config.wormholeChainId) {
+                setVaultBalances(balances);
+            }
+        } catch (error) {
+            console.error(`Error fetching balances for chain ${wormholeChainId}:`, error);
         } finally {
             setIsLoadingBalances(false);
         }
@@ -896,14 +939,36 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     /**
      * Get vault address for any supported chain by Wormhole chain ID
      * This is the universal accessor for multi-chain vault addresses
+     * 
+     * IMPORTANT: Each EVM chain has its own vault address computed from
+     * the chain's factory contract. This is NOT the same as the hub vault address.
      */
     const getVaultAddressForChain = useCallback((wormholeChainId: number): string | null => {
+        // For EVM chains, use SDK's method to compute the correct per-chain address
+        if (sdk && identity?.keyHash) {
+            const isEvmChain = wormholeChainId === 10004 || wormholeChainId === 10005 || 
+                               wormholeChainId === 10003 || wormholeChainId === 40;
+            if (isEvmChain) {
+                try {
+                    return sdk.getVaultAddressForChain(wormholeChainId, identity.keyHash);
+                } catch (error) {
+                    console.warn(`Failed to derive vault address for chain ${wormholeChainId}:`, error);
+                    // Fallback to hub vault address (may be wrong, but better than null)
+                    return vaultAddress;
+                }
+            }
+        }
+
         switch (wormholeChainId) {
-            // EVM chains (all use the same EVM vault address from hub)
-            case 10004: // Base Sepolia
+            // EVM chains - fallback when SDK not available
+            case 10004: // Base Sepolia (hub)
+                return vaultAddress;
             case 10005: // Optimism Sepolia
             case 10003: // Arbitrum Sepolia
             case 40:    // Sei Atlantic-2
+                // Without SDK, we can't compute the correct address
+                // Return vaultAddress as fallback (this may show wrong balances)
+                console.warn(`SDK not available, returning hub vault address for chain ${wormholeChainId}`);
                 return vaultAddress;
             
             // Solana
@@ -926,7 +991,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 console.warn(`Unknown chain ID: ${wormholeChainId}`);
                 return null;
         }
-    }, [vaultAddress, solanaVaultAddress, suiVaultAddress, aptosVaultAddress, starknetVaultAddress]);
+    }, [sdk, identity?.keyHash, vaultAddress, solanaVaultAddress, suiVaultAddress, aptosVaultAddress, starknetVaultAddress]);
 
     /**
      * All vault addresses across chains (computed)
@@ -1576,8 +1641,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 
                 // Phase 2: Balances
                 vaultBalances,
+                chainBalances,
                 isLoadingBalances,
                 refreshBalances,
+                refreshBalancesForChain,
                 getTokenBalance,
                 getTokenList,
                 

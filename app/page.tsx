@@ -39,8 +39,10 @@ export default function Home() {
     hasStoredCredential,
     createVault,
     vaultBalances,
+    chainBalances,
     isLoadingBalances,
     refreshBalances,
+    refreshBalancesForChain,
     getTokenList,
     prepareTransfer,
     executeTransfer,
@@ -105,6 +107,15 @@ export default function Home() {
       refreshBalances();
     }
   }, [vaultAddress]);
+
+  // Refresh balances when selected chain changes (for EVM chains)
+  useEffect(() => {
+    const chainIsEvm = isEvmChain(selectedChain);
+    if (chainIsEvm && vaultAddress && !chainBalances[selectedChain]) {
+      // Fetch balances for the newly selected chain
+      refreshBalancesForChain(selectedChain);
+    }
+  }, [selectedChain, vaultAddress, chainBalances, refreshBalancesForChain]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -861,12 +872,12 @@ export default function Home() {
               <SolanaBalanceCard showReceiveButton={false} />
             )
           ) : (
-            // EVM Balance Display
+            // EVM Balance Display - use chain-specific balances
             vaultAddress && (
               <BalanceCard
-                balances={vaultBalances}
+                balances={chainBalances[selectedChain] ?? vaultBalances}
                 isLoading={isLoadingBalances}
-                onRefresh={refreshBalances}
+                onRefresh={() => refreshBalancesForChain(selectedChain)}
                 chainName={SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name || 'Unknown'}
               />
             )
