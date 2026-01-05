@@ -61,6 +61,18 @@ export default function Home() {
     aptosVaultAddress,
     starknetVaultAddress,
     getVaultAddressForChain,
+    // Sui
+    suiBalance,
+    isLoadingSuiBalance,
+    refreshSuiBalance,
+    // Aptos
+    aptosBalance,
+    isLoadingAptosBalance,
+    refreshAptosBalance,
+    // Starknet
+    starknetBalance,
+    isLoadingStarknetBalance,
+    refreshStarknetBalance,
     // Backup passkey (Issue #22/#25)
     hasBackupPasskey,
     isAddingBackupPasskey,
@@ -116,6 +128,28 @@ export default function Home() {
       refreshBalancesForChain(selectedChain);
     }
   }, [selectedChain, vaultAddress, chainBalances, refreshBalancesForChain]);
+
+  // Refresh balances when selected chain changes (for non-EVM chains)
+  useEffect(() => {
+    if (isSolanaChain(selectedChain) && solanaVaultAddress && !solanaBalance) {
+      refreshSolanaBalance();
+    }
+    if (isSuiChain(selectedChain) && suiVaultAddress && !suiBalance) {
+      refreshSuiBalance();
+    }
+    if (isAptosChain(selectedChain) && aptosVaultAddress && !aptosBalance) {
+      refreshAptosBalance();
+    }
+    if (isStarknetChain(selectedChain) && starknetVaultAddress && !starknetBalance) {
+      refreshStarknetBalance();
+    }
+  }, [
+    selectedChain, 
+    solanaVaultAddress, solanaBalance, refreshSolanaBalance,
+    suiVaultAddress, suiBalance, refreshSuiBalance,
+    aptosVaultAddress, aptosBalance, refreshAptosBalance,
+    starknetVaultAddress, starknetBalance, refreshStarknetBalance
+  ]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -600,13 +634,31 @@ export default function Home() {
                           )
                         )}
                         {isSuiChain(selectedChain) && (
-                          <span className="text-white font-medium text-sm">SUI Testnet</span>
+                          isLoadingSuiBalance ? (
+                            <div className="animate-pulse h-5 w-20 bg-white/10 rounded" />
+                          ) : (
+                            <span className="text-white font-medium">
+                              {(suiBalance?.sui ?? 0).toFixed(4)} SUI
+                            </span>
+                          )
                         )}
                         {isAptosChain(selectedChain) && (
-                          <span className="text-white font-medium text-sm">Aptos Testnet</span>
+                          isLoadingAptosBalance ? (
+                            <div className="animate-pulse h-5 w-20 bg-white/10 rounded" />
+                          ) : (
+                            <span className="text-white font-medium">
+                              {(aptosBalance?.apt ?? 0).toFixed(4)} APT
+                            </span>
+                          )
                         )}
                         {isStarknetChain(selectedChain) && (
-                          <span className="text-white font-medium text-sm">Starknet Sepolia</span>
+                          isLoadingStarknetBalance ? (
+                            <div className="animate-pulse h-5 w-20 bg-white/10 rounded" />
+                          ) : (
+                            <span className="text-white font-medium">
+                              {(starknetBalance?.strk ?? 0).toFixed(4)} STRK
+                            </span>
+                          )
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -619,6 +671,57 @@ export default function Home() {
                           >
                             <svg 
                               className={`w-4 h-4 ${iconColorClass} ${isLoadingSolanaBalance ? 'animate-spin' : ''}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        )}
+                        {isSuiChain(selectedChain) && (
+                          <button
+                            onClick={refreshSuiBalance}
+                            disabled={isLoadingSuiBalance}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                            title="Refresh balance"
+                          >
+                            <svg 
+                              className={`w-4 h-4 ${iconColorClass} ${isLoadingSuiBalance ? 'animate-spin' : ''}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        )}
+                        {isAptosChain(selectedChain) && (
+                          <button
+                            onClick={refreshAptosBalance}
+                            disabled={isLoadingAptosBalance}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                            title="Refresh balance"
+                          >
+                            <svg 
+                              className={`w-4 h-4 ${iconColorClass} ${isLoadingAptosBalance ? 'animate-spin' : ''}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        )}
+                        {isStarknetChain(selectedChain) && (
+                          <button
+                            onClick={refreshStarknetBalance}
+                            disabled={isLoadingStarknetBalance}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                            title="Refresh balance"
+                          >
+                            <svg 
+                              className={`w-4 h-4 ${iconColorClass} ${isLoadingStarknetBalance ? 'animate-spin' : ''}`}
                               fill="none" 
                               stroke="currentColor" 
                               viewBox="0 0 24 24"
@@ -870,6 +973,111 @@ export default function Home() {
             // Solana Balance Display
             solanaVaultAddress && (
               <SolanaBalanceCard showReceiveButton={false} />
+            )
+          ) : isSuiChain(selectedChain) ? (
+            // Sui Balance Display
+            suiVaultAddress && (
+              <div className="bg-gradient-to-br from-cyan-900/30 to-teal-900/30 backdrop-blur-lg rounded-2xl border border-cyan-500/30 overflow-hidden">
+                <div className="p-6 border-b border-cyan-500/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-400 flex items-center justify-center font-bold text-white">
+                        SUI
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Sui Testnet</h3>
+                        <p className="text-cyan-300/70 text-sm">Native Balance</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={refreshSuiBalance}
+                      disabled={isLoadingSuiBalance}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <svg className={`w-5 h-5 text-cyan-300 ${isLoadingSuiBalance ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="text-center py-6">
+                    {isLoadingSuiBalance ? (
+                      <div className="animate-pulse h-10 w-32 bg-white/10 rounded mx-auto" />
+                    ) : (
+                      <p className="text-3xl font-bold text-white">{(suiBalance?.sui ?? 0).toFixed(4)} <span className="text-cyan-300">SUI</span></p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          ) : isAptosChain(selectedChain) ? (
+            // Aptos Balance Display
+            aptosVaultAddress && (
+              <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 backdrop-blur-lg rounded-2xl border border-green-500/30 overflow-hidden">
+                <div className="p-6 border-b border-green-500/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-400 flex items-center justify-center font-bold text-white">
+                        APT
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Aptos Testnet</h3>
+                        <p className="text-green-300/70 text-sm">Native Balance</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={refreshAptosBalance}
+                      disabled={isLoadingAptosBalance}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <svg className={`w-5 h-5 text-green-300 ${isLoadingAptosBalance ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="text-center py-6">
+                    {isLoadingAptosBalance ? (
+                      <div className="animate-pulse h-10 w-32 bg-white/10 rounded mx-auto" />
+                    ) : (
+                      <p className="text-3xl font-bold text-white">{(aptosBalance?.apt ?? 0).toFixed(4)} <span className="text-green-300">APT</span></p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          ) : isStarknetChain(selectedChain) ? (
+            // Starknet Balance Display
+            starknetVaultAddress && (
+              <div className="bg-gradient-to-br from-orange-900/30 to-pink-900/30 backdrop-blur-lg rounded-2xl border border-orange-500/30 overflow-hidden">
+                <div className="p-6 border-b border-orange-500/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-pink-400 flex items-center justify-center font-bold text-white text-xs">
+                        STRK
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">Starknet Sepolia</h3>
+                        <p className="text-orange-300/70 text-sm">Native Balance</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={refreshStarknetBalance}
+                      disabled={isLoadingStarknetBalance}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <svg className={`w-5 h-5 text-orange-300 ${isLoadingStarknetBalance ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="text-center py-6">
+                    {isLoadingStarknetBalance ? (
+                      <div className="animate-pulse h-10 w-32 bg-white/10 rounded mx-auto" />
+                    ) : (
+                      <p className="text-3xl font-bold text-white">{(starknetBalance?.strk ?? 0).toFixed(4)} <span className="text-orange-300">STRK</span></p>
+                    )}
+                  </div>
+                </div>
+              </div>
             )
           ) : (
             // EVM Balance Display - use chain-specific balances

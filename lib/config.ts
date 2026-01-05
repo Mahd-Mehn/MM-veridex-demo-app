@@ -7,7 +7,7 @@ const RPC_URLS = {
     arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
     starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/tsOnfTBZDKMXcUA26OED-',
     suiTestnet: process.env.NEXT_PUBLIC_SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
-    aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://fullnode.testnet.aptoslabs.com/v1',
+    aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://aptos-testnet.g.alchemy.com/v2/tsOnfTBZDKMXcUA26OED-',
 };
 
 // Base Sepolia (Hub Chain) - Now also has factory for vault creation

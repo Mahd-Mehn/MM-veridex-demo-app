@@ -61,6 +61,33 @@ export interface SolanaBalance {
     usdValue?: number;
 }
 
+// Sui balance type
+export interface SuiBalance {
+    address: string;
+    mist: bigint;
+    sui: number;
+    /** USD value (optional) */
+    usdValue?: number;
+}
+
+// Aptos balance type
+export interface AptosBalance {
+    address: string;
+    octas: bigint;
+    apt: number;
+    /** USD value (optional) */
+    usdValue?: number;
+}
+
+// Starknet balance type (STRK native token)
+export interface StarknetBalance {
+    address: string;
+    wei: bigint;
+    strk: number;
+    /** USD value (optional) */
+    usdValue?: number;
+}
+
 interface VeridexContextType {
     sdk: VeridexSDK | null;
     credential: PasskeyCredential | null;
@@ -146,14 +173,23 @@ interface VeridexContextType {
     // Sui vault management
     suiVaultExists: boolean;
     createSuiVault: () => Promise<VaultCreationResult>;
+    suiBalance: SuiBalance | null;
+    isLoadingSuiBalance: boolean;
+    refreshSuiBalance: () => Promise<void>;
 
     // Aptos vault management
     aptosVaultExists: boolean;
     createAptosVault: () => Promise<VaultCreationResult>;
+    aptosBalance: AptosBalance | null;
+    isLoadingAptosBalance: boolean;
+    refreshAptosBalance: () => Promise<void>;
 
     // Starknet vault management
     starknetVaultExists: boolean;
     createStarknetVault: () => Promise<VaultCreationResult>;
+    starknetBalance: StarknetBalance | null;
+    isLoadingStarknetBalance: boolean;
+    refreshStarknetBalance: () => Promise<void>;
 
     // Backup Passkey Management (Issue #22/#25)
     hasBackupPasskey: boolean;
@@ -219,6 +255,14 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [suiVaultExists, setSuiVaultExists] = useState<boolean>(false);
     const [aptosVaultExists, setAptosVaultExists] = useState<boolean>(false);
     const [starknetVaultExists, setStarknetVaultExists] = useState<boolean>(false);
+    
+    // Non-EVM chain balances
+    const [suiBalance, setSuiBalance] = useState<SuiBalance | null>(null);
+    const [isLoadingSuiBalance, setIsLoadingSuiBalance] = useState<boolean>(false);
+    const [aptosBalance, setAptosBalance] = useState<AptosBalance | null>(null);
+    const [isLoadingAptosBalance, setIsLoadingAptosBalance] = useState<boolean>(false);
+    const [starknetBalance, setStarknetBalance] = useState<StarknetBalance | null>(null);
+    const [isLoadingStarknetBalance, setIsLoadingStarknetBalance] = useState<boolean>(false);
 
     // Backup passkey state (Issue #22/#25)
     const [hasBackupPasskey, setHasBackupPasskey] = useState<boolean>(false);
@@ -514,27 +558,25 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 }
             }
 
-            // Compute Aptos vault address using keyHash
+            // Get Aptos vault address from on-chain registry (async)
             if (aptosC && unifiedIdentity.keyHash) {
                 try {
-                    const aptosVaultAddr = aptosC.computeVaultAddress(unifiedIdentity.keyHash);
-                    setAptosVaultAddress(aptosVaultAddr);
-                    console.log('Aptos vault address:', aptosVaultAddr);
-                    
-                    // Check if Aptos vault exists via relayer
-                    try {
-                        const vaultInfo = await aptosC.getVaultViaRelayer(
-                            unifiedIdentity.keyHash,
-                            config.relayerUrl
-                        );
-                        setAptosVaultExists(vaultInfo.exists);
-                        console.log('Aptos vault exists:', vaultInfo.exists);
-                    } catch (existsError) {
-                        console.warn('Could not check Aptos vault existence:', existsError);
+                    // Use async getVaultAddress which queries the on-chain VaultRegistry
+                    const aptosVaultAddr = await aptosC.getVaultAddress(unifiedIdentity.keyHash);
+                    if (aptosVaultAddr) {
+                        setAptosVaultAddress(aptosVaultAddr);
+                        setAptosVaultExists(true);
+                        console.log('Aptos vault address (from registry):', aptosVaultAddr);
+                    } else {
+                        // Vault doesn't exist in registry yet
+                        setAptosVaultAddress(null);
                         setAptosVaultExists(false);
+                        console.log('Aptos vault not found in registry for keyHash:', unifiedIdentity.keyHash);
                     }
                 } catch (aptosError) {
-                    console.warn('Could not compute Aptos vault address:', aptosError);
+                    console.warn('Could not get Aptos vault address from registry:', aptosError);
+                    setAptosVaultAddress(null);
+                    setAptosVaultExists(false);
                 }
             }
 
@@ -934,6 +976,213 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
     const getSolanaReceiveAddress = (): string | null => {
         return solanaVaultAddress;
+    };
+
+    // ========================================================================
+    // Sui Balance Methods
+    // ========================================================================
+
+    const refreshSuiBalance = async () => {
+        if (!suiVaultAddress) return;
+
+        setIsLoadingSuiBalance(true);
+        try {
+            // Sui RPC call to get balance
+            const response = await fetch(suiConfig.rpcUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'suix_getBalance',
+                    params: [suiVaultAddress, '0x2::sui::SUI'],
+                }),
+            });
+
+            const data = await response.json();
+            if (data.result && data.result.totalBalance) {
+                const mist = BigInt(data.result.totalBalance);
+                const suiAmount = Number(mist) / 1_000_000_000; // 9 decimals
+                setSuiBalance({
+                    address: suiVaultAddress,
+                    mist,
+                    sui: suiAmount,
+                    usdValue: undefined,
+                });
+            } else {
+                // No balance or new account
+                setSuiBalance({
+                    address: suiVaultAddress,
+                    mist: 0n,
+                    sui: 0,
+                    usdValue: undefined,
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching Sui balance:', error);
+        } finally {
+            setIsLoadingSuiBalance(false);
+        }
+    };
+
+    // ========================================================================
+    // Aptos Balance Methods
+    // ========================================================================
+
+    const refreshAptosBalance = async () => {
+        if (!aptosVaultAddress) return;
+
+        setIsLoadingAptosBalance(true);
+        try {
+            // Normalize address - ensure it has 0x prefix
+            const normalizedAddress = aptosVaultAddress.startsWith('0x') 
+                ? aptosVaultAddress 
+                : `0x${aptosVaultAddress}`;
+            
+            // Determine base URL - Alchemy URLs need /v1/ appended, Aptoslabs already has it
+            const baseUrl = aptosConfig.rpcUrl.includes('alchemy.com') 
+                ? `${aptosConfig.rpcUrl}/v1`
+                : aptosConfig.rpcUrl;
+            
+            // First try to get the account info to check if it exists
+            const accountUrl = `${baseUrl}/accounts/${normalizedAddress}`;
+            console.log('Fetching Aptos account:', accountUrl);
+            
+            const accountResponse = await fetch(accountUrl);
+            
+            if (!accountResponse.ok) {
+                if (accountResponse.status === 404) {
+                    // Account doesn't exist yet - this is expected for unfunded vaults
+                    console.log('Aptos account not found (not funded yet)');
+                    setAptosBalance({
+                        address: aptosVaultAddress,
+                        octas: 0n,
+                        apt: 0,
+                        usdValue: undefined,
+                    });
+                    return;
+                }
+                throw new Error(`Failed to fetch Aptos account: ${accountResponse.status}`);
+            }
+
+            // Account exists, now fetch the APT coin balance via resources endpoint
+            // This is more reliable than the specific resource endpoint
+            const resourcesUrl = `${baseUrl}/accounts/${normalizedAddress}/resources`;
+            console.log('Fetching Aptos resources:', resourcesUrl);
+            
+            const response = await fetch(resourcesUrl);
+
+            if (response.ok) {
+                const resources = await response.json();
+                // Find the APT CoinStore resource
+                const coinStore = resources.find((r: any) => 
+                    r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
+                );
+                
+                if (coinStore?.data?.coin?.value) {
+                    const octas = BigInt(coinStore.data.coin.value);
+                    const aptAmount = Number(octas) / 100_000_000; // 8 decimals
+                    console.log('Aptos balance fetched:', aptAmount, 'APT');
+                    setAptosBalance({
+                        address: aptosVaultAddress,
+                        octas,
+                        apt: aptAmount,
+                        usdValue: undefined,
+                    });
+                } else {
+                    // Account exists but no APT coin store - 0 balance
+                    console.log('Aptos account exists but no APT balance (resources:', resources.length, ')');
+                    setAptosBalance({
+                        address: aptosVaultAddress,
+                        octas: 0n,
+                        apt: 0,
+                        usdValue: undefined,
+                    });
+                }
+            } else {
+                console.error('Aptos resources fetch failed:', response.status, await response.text());
+                setAptosBalance({
+                    address: aptosVaultAddress,
+                    octas: 0n,
+                    apt: 0,
+                    usdValue: undefined,
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching Aptos balance:', error);
+            // Set zero balance on error so UI doesn't hang
+            setAptosBalance({
+                address: aptosVaultAddress,
+                octas: 0n,
+                apt: 0,
+                usdValue: undefined,
+            });
+        } finally {
+            setIsLoadingAptosBalance(false);
+        }
+    };
+
+    // ========================================================================
+    // Starknet Balance Methods
+    // ========================================================================
+
+    const refreshStarknetBalance = async () => {
+        if (!starknetVaultAddress) return;
+
+        setIsLoadingStarknetBalance(true);
+        try {
+            // Starknet RPC call to get STRK balance
+            // STRK token contract on Sepolia
+            const strkContractAddress = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+            
+            const response = await fetch(starknetConfig.rpcUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'starknet_call',
+                    params: [{
+                        contract_address: strkContractAddress,
+                        entry_point_selector: '0x2e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e', // balanceOf
+                        calldata: [starknetVaultAddress],
+                    }, 'latest'],
+                }),
+            });
+
+            const data = await response.json();
+            if (data.result && data.result.length >= 2) {
+                // Starknet returns u256 as two felt252 (low, high)
+                const low = BigInt(data.result[0]);
+                const high = BigInt(data.result[1]);
+                const wei = low + (high << 128n);
+                const strkAmount = Number(wei) / 1e18; // 18 decimals
+                setStarknetBalance({
+                    address: starknetVaultAddress,
+                    wei,
+                    strk: strkAmount,
+                    usdValue: undefined,
+                });
+            } else {
+                setStarknetBalance({
+                    address: starknetVaultAddress,
+                    wei: 0n,
+                    strk: 0,
+                    usdValue: undefined,
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching Starknet balance:', error);
+            // Set zero balance on error
+            setStarknetBalance({
+                address: starknetVaultAddress,
+                wei: 0n,
+                strk: 0,
+                usdValue: undefined,
+            });
+        } finally {
+            setIsLoadingStarknetBalance(false);
+        }
     };
 
     /**
@@ -1689,14 +1938,23 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 // Sui vault management
                 suiVaultExists,
                 createSuiVault,
+                suiBalance,
+                isLoadingSuiBalance,
+                refreshSuiBalance,
 
                 // Aptos vault management
                 aptosVaultExists,
                 createAptosVault,
+                aptosBalance,
+                isLoadingAptosBalance,
+                refreshAptosBalance,
 
                 // Starknet vault management
                 starknetVaultExists,
                 createStarknetVault,
+                starknetBalance,
+                isLoadingStarknetBalance,
+                refreshStarknetBalance,
 
                 // Backup Passkey Management (Issue #22/#25)
                 hasBackupPasskey,
