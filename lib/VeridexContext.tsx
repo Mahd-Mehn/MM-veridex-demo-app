@@ -1043,6 +1043,41 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             const baseUrl = aptosConfig.rpcUrl.includes('alchemy.com') 
                 ? `${aptosConfig.rpcUrl}/v1`
                 : aptosConfig.rpcUrl;
+
+            // Primary method: use the canonical coin::balance view.
+            // This is more reliable than scanning resources, especially across different nodes/providers.
+            try {
+                const viewUrl = `${baseUrl}/view`;
+                const viewResponse = await fetch(viewUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        function: '0x1::coin::balance',
+                        type_arguments: ['0x1::aptos_coin::AptosCoin'],
+                        arguments: [normalizedAddress],
+                    }),
+                });
+
+                if (viewResponse.ok) {
+                    const viewData = await viewResponse.json();
+                    const raw = Array.isArray(viewData) ? viewData[0] : null;
+                    if (raw !== null && raw !== undefined) {
+                        const octas = BigInt(raw);
+                        const aptAmount = Number(octas) / 100_000_000; // 8 decimals
+                        setAptosBalance({
+                            address: aptosVaultAddress,
+                            octas,
+                            apt: aptAmount,
+                            usdValue: undefined,
+                        });
+                        return;
+                    }
+                }
+            } catch {
+                // Ignore and fall back to resource scanning.
+            }
             
             // First try to get the account info to check if it exists
             const accountUrl = `${baseUrl}/accounts/${normalizedAddress}`;

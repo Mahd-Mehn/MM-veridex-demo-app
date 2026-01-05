@@ -81,7 +81,8 @@ export const suiConfig = {
 export const aptosConfig = {
     wormholeChainId: 22,
     rpcUrl: RPC_URLS.aptosTestnet,
-    moduleAddress: '0x65c2347fabc7a728ceb57a8c8af54bf5e53d8c4550f4b9bb387429385c1b3535',
+    // Spoke module address (deployed)
+    moduleAddress: '0x0237e04f74b991b5b6030a793779663033f4ff4a1682a9e66c1f41fc1ec3e2a4',
     wormholeCoreBridge: '0x5bc11445584a763c1fa7ed39081f1b920954da14e04b32440cba863d03e19625',
     tokenBridge: '0x576410486a2da45eee6c949c995670112ddf2fbeedab20350d506328eefc9d4f',
     network: 'testnet' as const,
