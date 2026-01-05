@@ -2,7 +2,15 @@
 
 A comprehensive Next.js 15 test application for the Veridex Protocol SDK, featuring passkey-based cross-chain authentication, gasless token transfers, and multi-chain vault management.
 
-## START Features
+## SDK Package
+
+This test app demonstrates the [@veridex/sdk](https://www.npmjs.com/package/@veridex/sdk) package:
+
+```bash
+npm install @veridex/sdk
+```
+
+## Features
 
 - **Passkey Registration & Login**: Test WebAuthn passkey creation and authentication
 - **Gasless Transfers**: Send tokens without paying gas - relayer covers all fees
