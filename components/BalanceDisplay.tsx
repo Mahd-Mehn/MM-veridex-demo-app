@@ -34,6 +34,7 @@ const formatUsdValue = (value: number): string => {
 const tokenIcons: Record<string, string> = {
     ETH: '⟠',
     WETH: '⟠',
+    'WETH.BASE': '🌉⟠', // Bridged WETH from Base
     USDC: '',
     USDT: '',
     DAI: '',
