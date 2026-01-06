@@ -152,7 +152,7 @@ const provider = new ethers.JsonRpcProvider('https://sepolia.base.org');
 const evmClient = new EVMClient({
   provider,
   testnet: true,
-  hubAddress: '0xf189b649ecb44708165f36619ED24ff917eF1f94',
+  hubAddress: '0x66D87dE68327f48A099c5B9bE97020Feab9a7c82',
 });
 
 const sdk = new VeridexSDK({

@@ -47,6 +47,7 @@ export default function Home() {
     prepareTransfer,
     executeTransfer,
     transferGasless,
+    bridgeGasless,
     pendingTransactions,
     bridgeProgress,
     // Sponsored vault creation (automatic, but expose loading state)
@@ -1109,11 +1110,11 @@ export default function Home() {
               tokens={getTokenList()}
               currentChainId={selectedChain}
               onSendGasless={async (params) => {
-                // Gasless transfers work the same way for all chains:
+                // Same-chain gasless transfers:
                 // 1. User signs with passkey
                 // 2. Relayer submits to Hub (Base)
                 // 3. Hub emits VAA to target chain
-                // 4. Relayer delivers to spoke (EVM or Solana)
+                // 4. Relayer delivers to spoke vault which executes transfer
                 const result = await transferGasless({
                   targetChain: params.targetChain,
                   token: params.token,
@@ -1123,8 +1124,25 @@ export default function Home() {
                 setActiveTab('wallet');
                 return result;
               }}
+              onBridgeGasless={async (params) => {
+                // Cross-chain gasless bridge:
+                // 1. User signs with passkey
+                // 2. Relayer submits to Hub (Base)
+                // 3. Hub emits VAA to source chain vault
+                // 4. Source vault bridges via Wormhole Token Bridge to destination
+                const result = await bridgeGasless({
+                  sourceChain: params.sourceChain,
+                  destinationChain: params.destinationChain,
+                  token: params.token,
+                  recipient: params.recipient,
+                  amount: params.amount,
+                });
+                setActiveTab('wallet');
+                return result;
+              }}
               isLoading={isLoading}
               vaultAddress={(isSolanaChain(selectedChain) ? solanaVaultAddress : vaultAddress) ?? ''}
+              getVaultAddressForChain={getVaultAddressForChain}
             />
           </div>
         )}

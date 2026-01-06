@@ -15,14 +15,14 @@ export const config = {
     chainId: 84532,
     wormholeChainId: 10004,
     rpcUrl: RPC_URLS.baseSepolia,
-    hubContract: '0xf189b649ecb44708165f36619ED24ff917eF1f94',
+    hubContract: '0x66D87dE68327f48A099c5B9bE97020Feab9a7c82',
     wormholeCoreBridge: '0x79A1027a6A159502049F10906D333EC57E95F083',
     wormholeTokenBridge: '0x86F55A04690fd7815A3D802bD587e83eA888B239',
     chainName: 'Base Sepolia',
     explorerUrl: 'https://sepolia.basescan.org',
     // Factory deployed on Base Sepolia for local vault creation
-    vaultFactory: '0x0E4B53AbCE029Df2a1e0068F16C5A35A6a8D85b6',
-    vaultImplementation: '0x755F4d7191fC8A3e832E9f8b30c7ab6543F943f3',
+    vaultFactory: '0xCFaEb5652aa2Ee60b2229dC8895B4159749C7e53',
+    vaultImplementation: '0x0d13367C16c6f0B24eD275CC67C7D9f42878285c',
     // Relayer URL for gasless transactions
     relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001',
 };
@@ -37,8 +37,8 @@ export const spokeConfigs = {
         wormholeTokenBridge: '0x99737Ec4B815d816c49A385943baf0380e75c0Ac',
         chainName: 'Optimism Sepolia',
         explorerUrl: 'https://sepolia-optimism.etherscan.io',
-        vaultFactory: '0x677bA5C2f9c7377860c7aeB00037E1a5D12B3515',
-        vaultImplementation: '0x966248A18329037B043C21AcDae9B3161C7acB33',
+        vaultFactory: '0xA5653d54079ABeCe780F8d9597B2bc4B09fe464A',
+        vaultImplementation: '0x8099b1406485d2255ff89Ce5Ea18520802AFC150',
     },
     arbitrumSepolia: {
         chainId: 421614,
@@ -48,8 +48,8 @@ export const spokeConfigs = {
         wormholeTokenBridge: '0xC7A204bDBFe983FCD8d8E61D02b475D4073fF97e',
         chainName: 'Arbitrum Sepolia',
         explorerUrl: 'https://sepolia.arbiscan.io',
-        vaultFactory: '0xbE9B9c39956448DA75Ac97E5e3dE17e34171660A',
-        vaultImplementation: '0x500853DCc54Fd1A707ec9d443032Bb7748f426d3',
+        vaultFactory: '0xd36D3D5DB59d78f1E33813490F72DABC15C9B07c',
+        vaultImplementation: '0xB10ACf39eBF17fc33F722cBD955b7aeCB0611bc4',
     },
 };
 

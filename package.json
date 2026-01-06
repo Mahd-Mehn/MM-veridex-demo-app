@@ -11,7 +11,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
-    "@veridex/sdk": "1.0.0-beta.10",
+    "@veridex/sdk": "file:../packages/sdk",
     "ethers": "^6.16.0",
     "next": "16.0.10",
     "qrcode": "^1.5.4",

@@ -22,27 +22,41 @@ interface TransferParams {
     amount: bigint;
 }
 
+interface BridgeParams {
+    sourceChain: number;
+    destinationChain: number;
+    token: string;
+    recipient: string;
+    amount: bigint;
+}
+
 interface SendFormProps {
     tokens: TokenInfo[];
     currentChainId: number;
     /** Gasless transfer - user only needs passkey, no wallet required */
     onSendGasless?: (params: TransferParams) => Promise<{ transactionHash: string; sequence: bigint }>;
+    /** Gasless bridge - for cross-chain transfers */
+    onBridgeGasless?: (params: BridgeParams) => Promise<{ transactionHash: string; sequence: bigint }>;
     /** Legacy: Prepare transfer (requires wallet) */
     onPrepare?: (params: TransferParams) => Promise<PreparedTransfer>;
     /** Legacy: Execute prepared transfer (requires wallet) */
     onSend?: (prepared: PreparedTransfer) => Promise<{ transactionHash: string; sequence: bigint }>;
     isLoading: boolean;
     vaultAddress: string;
+    /** Get vault address for a specific chain (for cross-chain self-transfer detection) */
+    getVaultAddressForChain?: (wormholeChainId: number) => string | null;
 }
 
 export function SendForm({
     tokens,
     currentChainId,
     onSendGasless,
+    onBridgeGasless,
     onPrepare,
     onSend,
     isLoading,
     vaultAddress,
+    getVaultAddressForChain,
 }: SendFormProps) {
     // Use gasless flow if available
     const isGasless = !!onSendGasless;
@@ -87,6 +101,18 @@ export function SendForm({
             name: 'Ethereum',
             address: 'native',
         };
+
+    // Check if recipient is the user's own vault (self-transfer warning)
+    // For cross-chain transfers, check the target chain's vault address
+    const targetChainVaultAddress = getVaultAddressForChain?.(targetChain) ?? null;
+    const isSelfTransfer = recipient && (
+        // Check against current chain vault
+        (vaultAddress && recipient.toLowerCase() === vaultAddress.toLowerCase()) ||
+        // Check against target chain vault (for cross-chain self-transfers)
+        (targetChainVaultAddress && recipient.toLowerCase() === targetChainVaultAddress.toLowerCase())
+    );
+    const isCrossChainSelfTransfer = isSelfTransfer && isCrossChain && 
+        targetChainVaultAddress && recipient.toLowerCase() === targetChainVaultAddress.toLowerCase();
 
     // Validate address based on target chain
     const isValidAddress = (addr: string): boolean => {
@@ -187,13 +213,35 @@ export function SendForm({
         setError('');
 
         try {
-            // Gasless flow: use onSendGasless directly with params
-            if (isGasless && onSendGasless && prepared?.params) {
-                const result = await onSendGasless(prepared.params);
-                setTxHash(result.transactionHash);
-                setSequence(result.sequence);
-                setStep('success');
-                return;
+            // Check if this is a cross-chain transfer (destination differs from source)
+            const isCrossChainSend = prepared?.params && prepared.params.targetChain !== currentChainId;
+            
+            // Gasless flow: route to bridge for cross-chain, transfer for same-chain
+            if (isGasless && prepared?.params) {
+                if (isCrossChainSend && onBridgeGasless) {
+                    // Use bridge for cross-chain transfers
+                    const bridgeParams = {
+                        sourceChain: currentChainId,
+                        destinationChain: prepared.params.targetChain,
+                        token: prepared.params.token,
+                        recipient: prepared.params.recipient,
+                        amount: prepared.params.amount,
+                    };
+                    console.log('[SendForm] Cross-chain transfer detected, using bridge:', bridgeParams);
+                    const result = await onBridgeGasless(bridgeParams);
+                    setTxHash(result.transactionHash);
+                    setSequence(result.sequence);
+                    setStep('success');
+                    return;
+                } else if (onSendGasless) {
+                    // Same-chain transfer
+                    console.log('[SendForm] Same-chain transfer:', prepared.params);
+                    const result = await onSendGasless(prepared.params);
+                    setTxHash(result.transactionHash);
+                    setSequence(result.sequence);
+                    setStep('success');
+                    return;
+                }
             }
             
             // Legacy flow: use onSend with prepared transfer
@@ -315,9 +363,15 @@ export function SendForm({
     }
 
     if (step === 'confirm' && prepared) {
+        const willUseBridge = isCrossChain && !!onBridgeGasless;
+        const currentChainName = CHAIN_OPTIONS.find(c => c.id === currentChainId)?.name;
+        const targetChainName = CHAIN_OPTIONS.find(c => c.id === targetChain)?.name;
+        
         return (
             <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-white">Confirm Transfer</h3>
+                <h3 className="text-lg font-semibold text-white">
+                    {willUseBridge ? 'Confirm Bridge' : 'Confirm Transfer'}
+                </h3>
 
                 <div className="bg-white/5 rounded-xl p-4 space-y-4">
                     <div className="flex justify-between">
@@ -326,27 +380,43 @@ export function SendForm({
                             {amount} {tokenInfo.symbol}
                         </span>
                     </div>
+                    {willUseBridge && (
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">From</span>
+                            <span className="text-white">
+                                {currentChainName}
+                            </span>
+                        </div>
+                    )}
                     <div className="flex justify-between">
-                        <span className="text-gray-400">To</span>
-                        <span className="text-white font-mono text-sm">
-                            {recipient.slice(0, 8)}...{recipient.slice(-6)}
+                        <span className="text-gray-400">{willUseBridge ? 'To Chain' : 'Network'}</span>
+                        <span className="text-white">
+                            {targetChainName}
                         </span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Network</span>
-                        <span className="text-white">
-                            {CHAIN_OPTIONS.find(c => c.id === targetChain)?.name}
+                        <span className="text-gray-400">Recipient</span>
+                        <span className="text-white font-mono text-sm">
+                            {recipient.slice(0, 8)}...{recipient.slice(-6)}
                         </span>
                     </div>
                     {isCrossChain && (
                         <div className="flex justify-between items-center">
                             <span className="text-gray-400">Transfer Type</span>
-                            <span className="text-purple-400 flex items-center gap-1">
+                            <span className={`flex items-center gap-1 ${willUseBridge ? 'text-blue-400' : 'text-purple-400'}`}>
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
-                                Cross-Chain
+                                {willUseBridge ? 'Wormhole Bridge' : 'Cross-Chain Transfer'}
                             </span>
+                        </div>
+                    )}
+                    {willUseBridge && (
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm text-blue-200">
+                            <p className="font-medium mb-1">🌉 How this works:</p>
+                            <p className="text-blue-300/80">
+                                Your {currentChainName} vault will bridge funds via Wormhole Token Bridge to {targetChainName}.
+                            </p>
                         </div>
                     )}
                     <div className="border-t border-white/10 pt-4">
@@ -394,10 +464,49 @@ export function SendForm({
                     type="text"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isSelfTransfer ? 'border-yellow-500/50' : 'border-white/10'
+                    }`}
                     placeholder={isSourceSolana || isTargetSolana ? "Solana address..." : "0x..."}
                 />
+                {isSelfTransfer && (
+                    <div className="mt-2 flex items-center gap-2 text-sm">
+                        {isCrossChainSelfTransfer ? (
+                            // Cross-chain to own vault - this is good, will use bridge!
+                            <div className="flex items-center gap-2 text-blue-400">
+                                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span>
+                                    Bridging to your {targetChainInfo?.name || 'destination chain'} vault via Wormhole.
+                                </span>
+                            </div>
+                        ) : (
+                            // Same-chain self-transfer warning
+                            <div className="flex items-center gap-2 text-yellow-400">
+                                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span>This is your own vault address. You&apos;re sending funds to yourself.</span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {/* Quick action: Use my vault on destination chain */}
+            {isCrossChain && targetChainVaultAddress && !isSelfTransfer && (
+                <button
+                    type="button"
+                    onClick={() => setRecipient(targetChainVaultAddress)}
+                    className="w-full py-2 text-sm text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Bridge to my {targetChainInfo?.name} vault
+                </button>
+            )}
 
             {/* Token Selection */}
             <div>
