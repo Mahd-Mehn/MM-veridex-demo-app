@@ -135,6 +135,8 @@ interface VeridexContextType {
     transfer: (params: TransferParams) => Promise<TransferResult>;
     /** Gasless transfer - uses relayer to pay gas fees */
     transferGasless: (params: TransferParams) => Promise<TransferResult>;
+    /** Gasless bridge - uses relayer to pay gas fees for cross-chain transfers */
+    bridgeGasless: (params: BridgeParams, onProgress?: (progress: CrossChainProgress) => void) => Promise<BridgeResult>;
     
     // Phase 2: Receive
     receiveAddress: ReceiveAddress | null;
@@ -966,9 +968,26 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     // TODO: Fetch SOL price from an oracle/API for USD value
                     usdValue: undefined,
                 });
+            } else {
+                // Default to zero (unfunded account or unexpected RPC response)
+                setSolanaBalance({
+                    address: solanaVaultAddress,
+                    lamports: 0n,
+                    sol: 0,
+                    native: 0,
+                    usdValue: undefined,
+                });
             }
         } catch (error) {
             console.error('Error fetching Solana balance:', error);
+            // Set zero balance on error so UI doesn't hang
+            setSolanaBalance({
+                address: solanaVaultAddress,
+                lamports: 0n,
+                sol: 0,
+                native: 0,
+                usdValue: undefined,
+            });
         } finally {
             setIsLoadingSolanaBalance(false);
         }
@@ -1020,6 +1039,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             }
         } catch (error) {
             console.error('Error fetching Sui balance:', error);
+            // Set zero balance on error so UI doesn't hang
+            setSuiBalance({
+                address: suiVaultAddress,
+                mist: 0n,
+                sui: 0,
+                usdValue: undefined,
+            });
         } finally {
             setIsLoadingSuiBalance(false);
         }
@@ -1044,10 +1070,8 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 ? `${aptosConfig.rpcUrl}/v1`
                 : aptosConfig.rpcUrl;
 
-            // Primary method: use the canonical coin::balance view.
-            // This is more reliable than scanning resources, especially across different nodes/providers.
-            try {
-                const viewUrl = `${baseUrl}/view`;
+            const fetchAptCoinBalance = async (viewBaseUrl: string): Promise<bigint | null> => {
+                const viewUrl = `${viewBaseUrl}/view`;
                 const viewResponse = await fetch(viewUrl, {
                     method: 'POST',
                     headers: {
@@ -1060,89 +1084,43 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     }),
                 });
 
-                if (viewResponse.ok) {
-                    const viewData = await viewResponse.json();
-                    const raw = Array.isArray(viewData) ? viewData[0] : null;
-                    if (raw !== null && raw !== undefined) {
-                        const octas = BigInt(raw);
-                        const aptAmount = Number(octas) / 100_000_000; // 8 decimals
-                        setAptosBalance({
-                            address: aptosVaultAddress,
-                            octas,
-                            apt: aptAmount,
-                            usdValue: undefined,
-                        });
-                        return;
-                    }
-                }
+                if (!viewResponse.ok) return null;
+
+                const viewData = await viewResponse.json();
+                const raw = Array.isArray(viewData) ? viewData[0] : null;
+                if (raw === null || raw === undefined) return null;
+
+                return BigInt(raw);
+            };
+
+            // Primary: use the configured provider's view endpoint.
+            // This returns the correct balance even when CoinStore isn't present in /resources.
+            let octas: bigint | null = null;
+            try {
+                octas = await fetchAptCoinBalance(baseUrl);
             } catch {
-                // Ignore and fall back to resource scanning.
-            }
-            
-            // First try to get the account info to check if it exists
-            const accountUrl = `${baseUrl}/accounts/${normalizedAddress}`;
-            console.log('Fetching Aptos account:', accountUrl);
-            
-            const accountResponse = await fetch(accountUrl);
-            
-            if (!accountResponse.ok) {
-                if (accountResponse.status === 404) {
-                    // Account doesn't exist yet - this is expected for unfunded vaults
-                    console.log('Aptos account not found (not funded yet)');
-                    setAptosBalance({
-                        address: aptosVaultAddress,
-                        octas: 0n,
-                        apt: 0,
-                        usdValue: undefined,
-                    });
-                    return;
-                }
-                throw new Error(`Failed to fetch Aptos account: ${accountResponse.status}`);
+                octas = null;
             }
 
-            // Account exists, now fetch the APT coin balance via resources endpoint
-            // This is more reliable than the specific resource endpoint
-            const resourcesUrl = `${baseUrl}/accounts/${normalizedAddress}/resources`;
-            console.log('Fetching Aptos resources:', resourcesUrl);
-            
-            const response = await fetch(resourcesUrl);
-
-            if (response.ok) {
-                const resources = await response.json();
-                // Find the APT CoinStore resource
-                const coinStore = resources.find((r: any) => 
-                    r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
-                );
-                
-                if (coinStore?.data?.coin?.value) {
-                    const octas = BigInt(coinStore.data.coin.value);
-                    const aptAmount = Number(octas) / 100_000_000; // 8 decimals
-                    console.log('Aptos balance fetched:', aptAmount, 'APT');
-                    setAptosBalance({
-                        address: aptosVaultAddress,
-                        octas,
-                        apt: aptAmount,
-                        usdValue: undefined,
-                    });
-                } else {
-                    // Account exists but no APT coin store - 0 balance
-                    console.log('Aptos account exists but no APT balance (resources:', resources.length, ')');
-                    setAptosBalance({
-                        address: aptosVaultAddress,
-                        octas: 0n,
-                        apt: 0,
-                        usdValue: undefined,
-                    });
+            // Fallback: Aptos Labs fullnode (helps when third-party providers have view quirks).
+            if (octas === null) {
+                try {
+                    octas = await fetchAptCoinBalance('https://fullnode.testnet.aptoslabs.com/v1');
+                } catch {
+                    octas = null;
                 }
-            } else {
-                console.error('Aptos resources fetch failed:', response.status, await response.text());
-                setAptosBalance({
-                    address: aptosVaultAddress,
-                    octas: 0n,
-                    apt: 0,
-                    usdValue: undefined,
-                });
             }
+
+            // If both queries fail, default to zero (don't block the UI).
+            const safeOctas = octas ?? 0n;
+            const aptAmount = Number(safeOctas) / 100_000_000; // 8 decimals
+
+            setAptosBalance({
+                address: aptosVaultAddress,
+                octas: safeOctas,
+                apt: aptAmount,
+                usdValue: undefined,
+            });
         } catch (error) {
             console.error('Error fetching Aptos balance:', error);
             // Set zero balance on error so UI doesn't hang
@@ -1471,6 +1449,41 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             throw err;
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    /**
+     * Execute a gasless bridge using the relayer
+     * 
+     * This method allows users to bridge funds across chains without paying gas themselves.
+     * The relayer service pays the gas fees on behalf of the user.
+     */
+    const bridgeGasless = async (
+        params: BridgeParams,
+        onProgress?: (progress: CrossChainProgress) => void
+    ): Promise<BridgeResult> => {
+        if (!sdk) throw new Error('SDK not initialized');
+        
+        setIsLoading(true);
+        try {
+            console.log('[Veridex] Starting gasless bridge:', params);
+            const result = await sdk.bridgeViaRelayer(params, (progress) => {
+                setBridgeProgress(progress);
+                onProgress?.(progress);
+                updatePendingBridges();
+            });
+            console.log('[Veridex] Gasless bridge successful:', result);
+            
+            // Refresh balances after bridge
+            await refreshBalances();
+            
+            return result;
+        } catch (err: any) {
+            console.error('[Veridex] Gasless bridge failed:', err?.message || err);
+            throw err;
+        } finally {
+            setIsLoading(false);
+            setBridgeProgress(null);
         }
     };
 
@@ -1937,6 +1950,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 executeTransfer,
                 transfer,
                 transferGasless,
+                bridgeGasless,
                 
                 // Phase 2: Receive
                 receiveAddress,
