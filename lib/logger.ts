@@ -5,6 +5,7 @@
  * In development, all logs are shown.
  */
 
+
 const isProduction = process.env.NEXT_PUBLIC_DISABLE_LOGS === 'true' || 
                      process.env.NODE_ENV === 'production';
 
