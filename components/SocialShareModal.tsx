@@ -93,7 +93,7 @@ This is what mainstream crypto adoption requires. The tech is here.`;
     }
   };
 
-  const shareUrl = 'https://veridex.network';
+  const shareUrl = 'https://demo.veridex.network';
   const hashtags = ['Veridex', 'Web3', 'Passkeys', 'Crypto'];
 
   // Social share handlers

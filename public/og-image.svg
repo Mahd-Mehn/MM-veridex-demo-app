@@ -1,0 +1,55 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="50%" style="stop-color:#581c87"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="20" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="200" cy="100" r="150" fill="#ec4899" opacity="0.15" filter="url(#glow)"/>
+  <circle cx="1000" cy="530" r="200" fill="#a855f7" opacity="0.1" filter="url(#glow)"/>
+  
+  <!-- Lock icon -->
+  <g transform="translate(540, 120)">
+    <rect x="20" y="50" width="80" height="60" rx="8" fill="url(#accent)"/>
+    <path d="M35 50 V35 C35 20 85 20 85 35 V50" fill="none" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="60" cy="75" r="8" fill="#0f172a"/>
+    <rect x="57" y="75" width="6" height="15" fill="#0f172a"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="600" y="280" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">Veridex</text>
+  
+  <!-- Subtitle -->
+  <text x="600" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#a1a1aa" text-anchor="middle">Cross-Chain Passkey Wallet</text>
+  
+  <!-- Features -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#d4d4d8" text-anchor="middle">
+    <text x="340" y="430">🔐 No Seed Phrase</text>
+    <text x="600" y="430">⛽ No Gas Fees</text>
+    <text x="860" y="430">🌐 5 Chains</text>
+  </g>
+  
+  <!-- CTA -->
+  <rect x="450" y="480" width="300" height="56" rx="28" fill="url(#accent)"/>
+  <text x="600" y="518" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="white" text-anchor="middle">Try It Now →</text>
+  
+  <!-- Domain -->
+  <text x="600" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#71717a" text-anchor="middle">demo.veridex.network</text>
+</svg>
