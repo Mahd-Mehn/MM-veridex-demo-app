@@ -35,6 +35,15 @@ async function proxyRequest(
   }
   
   const targetUrl = `${RELAYER_URL}/api/v1/${path}`;
+  
+  // Debug logging (only in dev)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Relayer Proxy] ${method} ${targetUrl}`);
+  }
+
+  // Create abort controller for timeout (30s)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
     // Build headers to forward
@@ -57,6 +66,7 @@ async function proxyRequest(
     const fetchOptions: RequestInit = {
       method,
       headers,
+      signal: controller.signal,
     };
 
     // Add body for POST/PUT/PATCH
@@ -76,6 +86,9 @@ async function proxyRequest(
 
     // Make the proxied request
     const response = await fetch(targetWithParams.toString(), fetchOptions);
+    
+    // Clear timeout on success
+    clearTimeout(timeoutId);
 
     // Build response headers
     const responseHeaders: Record<string, string> = {};
@@ -109,12 +122,31 @@ async function proxyRequest(
       }
     );
   } catch (error) {
-    console.error('[Relayer Proxy] Error:', error);
+    clearTimeout(timeoutId);
+    
+    // Better error messages
+    let errorMessage = 'Relayer request failed';
+    let errorDetails = 'Unknown error';
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'Relayer request timed out';
+        errorDetails = 'Request took longer than 30 seconds';
+      } else if (error.message.includes('ETIMEDOUT') || error.message.includes('ECONNREFUSED')) {
+        errorMessage = 'Cannot reach relayer service';
+        errorDetails = `Network error: ${error.message}`;
+      } else {
+        errorDetails = error.message;
+      }
+    }
+    
+    console.error(`[Relayer Proxy] Error proxying to ${targetUrl}:`, error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Relayer request failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
+        details: errorDetails,
+        targetUrl: process.env.NODE_ENV === 'development' ? targetUrl : undefined,
       },
       { status: 502 }
     );

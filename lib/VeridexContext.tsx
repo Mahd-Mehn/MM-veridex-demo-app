@@ -37,9 +37,12 @@ import { ethers } from 'ethers';
 import { config, spokeConfigs, solanaConfig, suiConfig, aptosConfig, starknetConfig } from '@/lib/config';
 import { logger } from '@/lib/logger';
 
-// Relayer proxy URL - hides backend URL from browser Network tab
-// Uses local /api/relayer which proxies to the actual relayer backend
+// Relayer URL configuration
+// - Production: Uses /api/relayer proxy to hide backend URL from browser
+// - Development: Uses direct URL to avoid IPv6/network issues locally
+const RELAYER_DIRECT_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app/api/v1';
 const RELAYER_PROXY_URL = '/api/relayer';
+const getRelayerUrl = () => process.env.NODE_ENV === 'production' ? RELAYER_PROXY_URL : RELAYER_DIRECT_URL;
 
 // Multi-chain vault addresses type
 export interface MultiChainVaultAddresses {
@@ -303,7 +306,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     persistWallet: true,
                     testnet: true,
                     // Relayer for remote sponsorship (future primary method)
-                    relayerUrl: RELAYER_PROXY_URL,
+                    relayerUrl: getRelayerUrl(),
                     relayerApiKey: process.env.NEXT_PUBLIC_RELAYER_API_KEY,
                     // Wormhole Query Proxy API key (rate limit: 6 queries/sec)
                     queryApiKey: process.env.NEXT_PUBLIC_WORMHOLE_QUERY_API_KEY,
@@ -385,7 +388,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                         logger.log('Returning user detected, checking/creating non-EVM vaults...');
                         // Note: We need to define autoCreateNonEvmVaults before this useEffect runs
                         // For now, inline the vault creation check
-                        const relayerUrl = RELAYER_PROXY_URL;
+                        const relayerUrl = getRelayerUrl();
                         if (relayerUrl) {
                             const vaultPromises: Promise<void>[] = [];
                             
@@ -654,7 +657,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             starknet?: StarknetClient | null;
         }
     ) => {
-        const relayerUrl = RELAYER_PROXY_URL;
+        const relayerUrl = getRelayerUrl();
         if (!relayerUrl || !keyHash) {
             logger.log('Skipping non-EVM vault auto-creation: missing relayer URL or keyHash');
             return;
