@@ -8,6 +8,8 @@
  * 3. Weekly reminder logic for at-risk users
  */
 
+import { logger } from '@/lib/logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -126,7 +128,7 @@ export function getSyncStatus(): SyncStatus {
       };
     }
   } catch (err) {
-    console.warn('Failed to parse sync status from localStorage:', err);
+    logger.warn('Failed to parse sync status from localStorage:', err);
   }
 
   return {
@@ -147,7 +149,7 @@ export function saveSyncStatus(status: SyncStatus): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(status));
   } catch (err) {
-    console.warn('Failed to save sync status to localStorage:', err);
+    logger.warn('Failed to save sync status to localStorage:', err);
   }
 }
 
@@ -174,7 +176,7 @@ export function clearSyncStatus(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (err) {
-    console.warn('Failed to clear sync status from localStorage:', err);
+    logger.warn('Failed to clear sync status from localStorage:', err);
   }
 }
 

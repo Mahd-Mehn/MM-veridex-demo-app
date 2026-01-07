@@ -35,6 +35,7 @@ import { AptosClient } from '@veridex/sdk/chains/aptos';
 import { StarknetClient } from '@veridex/sdk/chains/starknet';
 import { ethers } from 'ethers';
 import { config, spokeConfigs, solanaConfig, suiConfig, aptosConfig, starknetConfig } from '@/lib/config';
+import { logger } from '@/lib/logger';
 
 // Multi-chain vault addresses type
 export interface MultiChainVaultAddresses {
@@ -377,7 +378,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     // Auto-create non-EVM vaults for returning users
                     // Pass the locally-created clients since state hasn't been updated yet
                     if (savedCred.keyHash) {
-                        console.log('Returning user detected, checking/creating non-EVM vaults...');
+                        logger.log('Returning user detected, checking/creating non-EVM vaults...');
                         // Note: We need to define autoCreateNonEvmVaults before this useEffect runs
                         // For now, inline the vault creation check
                         const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL;
@@ -389,13 +390,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                                 try {
                                     const info = await solClient.getVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                     if (!info.exists) {
-                                        console.log('Creating Solana vault for returning user...');
+                                        logger.log('Creating Solana vault for returning user...');
                                         await solClient.createVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                         setSolanaVaultExists(true);
                                     } else {
                                         setSolanaVaultExists(true);
                                     }
-                                } catch (e) { console.warn('Solana vault check failed:', e); }
+                                } catch (e) { logger.warn('Solana vault check failed:', e); }
                             })());
 
                             // Check/create Sui vault
@@ -403,13 +404,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                                 try {
                                     const info = await suiClientInstance.getVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                     if (!info.exists) {
-                                        console.log('Creating Sui vault for returning user...');
+                                        logger.log('Creating Sui vault for returning user...');
                                         await suiClientInstance.createVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                         setSuiVaultExists(true);
                                     } else {
                                         setSuiVaultExists(true);
                                     }
-                                } catch (e) { console.warn('Sui vault check failed:', e); }
+                                } catch (e) { logger.warn('Sui vault check failed:', e); }
                             })());
 
                             // Check/create Aptos vault
@@ -417,13 +418,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                                 try {
                                     const info = await aptosClientInstance.getVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                     if (!info.exists) {
-                                        console.log('Creating Aptos vault for returning user...');
+                                        logger.log('Creating Aptos vault for returning user...');
                                         await aptosClientInstance.createVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                         setAptosVaultExists(true);
                                     } else {
                                         setAptosVaultExists(true);
                                     }
-                                } catch (e) { console.warn('Aptos vault check failed:', e); }
+                                } catch (e) { logger.warn('Aptos vault check failed:', e); }
                             })());
 
                             // Check/create Starknet vault
@@ -431,29 +432,29 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                                 try {
                                     const info = await starknetClientInstance.getVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                     if (!info.exists) {
-                                        console.log('Creating Starknet vault for returning user...');
+                                        logger.log('Creating Starknet vault for returning user...');
                                         const createResult = await starknetClientInstance.createVaultViaRelayer(savedCred.keyHash, relayerUrl);
                                         setStarknetVaultAddress(createResult.address);
                                         setStarknetVaultExists(true);
-                                        console.log('Starknet vault created:', createResult.address);
+                                        logger.log('Starknet vault created:', createResult.address);
                                     } else {
                                         setStarknetVaultAddress(info.vaultAddress);
                                         setStarknetVaultExists(true);
-                                        console.log('Starknet vault found:', info.vaultAddress);
+                                        logger.log('Starknet vault found:', info.vaultAddress);
                                     }
-                                } catch (e) { console.warn('Starknet vault check failed:', e); }
+                                } catch (e) { logger.warn('Starknet vault check failed:', e); }
                             })());
 
                             // Run vault checks/creations in parallel (don't block app load)
                             Promise.allSettled(vaultPromises).then(results => {
                                 const fulfilled = results.filter(r => r.status === 'fulfilled').length;
-                                console.log(`Returning user vault check complete: ${fulfilled}/${results.length} succeeded`);
+                                logger.log(`Returning user vault check complete: ${fulfilled}/${results.length} succeeded`);
                             });
                         }
                     }
                 }
             } catch (error) {
-                console.error('SDK initialization error:', error);
+                logger.error('SDK initialization error:', error);
             } finally {
                 setIsLoading(false);
             }
@@ -497,7 +498,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     const exists = await sdkInstance.vaultExists();
                     setVaultDeployed(exists);
                 } catch {
-                    console.warn('Could not compute vault address');
+                    logger.warn('Could not compute vault address');
                 }
             }
 
@@ -506,7 +507,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 const recvAddr = sdkInstance.getReceiveAddress();
                 setReceiveAddress(recvAddr);
             } catch {
-                console.warn('Could not get receive address');
+                logger.warn('Could not get receive address');
             }
 
             // Compute Solana vault address using keyHash
@@ -515,7 +516,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const solVaultAddr = clientToUse.computeVaultAddress(unifiedIdentity.keyHash);
                     setSolanaVaultAddress(solVaultAddr);
-                    console.log('Solana vault address:', solVaultAddr);
+                    logger.log('Solana vault address:', solVaultAddr);
                     
                     // Check if vault exists on-chain via relayer
                     try {
@@ -524,14 +525,14 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                             config.relayerUrl
                         );
                         setSolanaVaultExists(vaultInfo.exists);
-                        console.log('Solana vault exists:', vaultInfo.exists);
+                        logger.log('Solana vault exists:', vaultInfo.exists);
                     } catch (existsError) {
                         // If relayer check fails, assume not exists (can still receive)
-                        console.warn('Could not check Solana vault existence:', existsError);
+                        logger.warn('Could not check Solana vault existence:', existsError);
                         setSolanaVaultExists(false);
                     }
                 } catch (solError) {
-                    console.warn('Could not compute Solana vault address:', solError);
+                    logger.warn('Could not compute Solana vault address:', solError);
                 }
             }
 
@@ -540,7 +541,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const suiVaultAddr = suiC.computeVaultAddress(unifiedIdentity.keyHash);
                     setSuiVaultAddress(suiVaultAddr);
-                    console.log('Sui vault address:', suiVaultAddr);
+                    logger.log('Sui vault address:', suiVaultAddr);
                     
                     // Check if Sui vault exists via relayer
                     try {
@@ -549,14 +550,14 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                             config.relayerUrl
                         );
                         setSuiVaultExists(vaultInfo.exists);
-                        console.log('Sui vault exists:', vaultInfo.exists);
+                        logger.log('Sui vault exists:', vaultInfo.exists);
                     } catch (existsError) {
                         // Sui uses implicit accounts - always consider as existing
-                        console.warn('Could not check Sui vault existence:', existsError);
+                        logger.warn('Could not check Sui vault existence:', existsError);
                         setSuiVaultExists(true); // Sui implicit accounts always exist
                     }
                 } catch (suiError) {
-                    console.warn('Could not compute Sui vault address:', suiError);
+                    logger.warn('Could not compute Sui vault address:', suiError);
                 }
             }
 
@@ -568,15 +569,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     if (aptosVaultAddr) {
                         setAptosVaultAddress(aptosVaultAddr);
                         setAptosVaultExists(true);
-                        console.log('Aptos vault address (from registry):', aptosVaultAddr);
+                        logger.log('Aptos vault address (from registry):', aptosVaultAddr);
                     } else {
                         // Vault doesn't exist in registry yet
                         setAptosVaultAddress(null);
                         setAptosVaultExists(false);
-                        console.log('Aptos vault not found in registry for keyHash:', unifiedIdentity.keyHash);
+                        logger.log('Aptos vault not found in registry for keyHash:', unifiedIdentity.keyHash);
                     }
                 } catch (aptosError) {
-                    console.warn('Could not get Aptos vault address from registry:', aptosError);
+                    logger.warn('Could not get Aptos vault address from registry:', aptosError);
                     setAptosVaultAddress(null);
                     setAptosVaultExists(false);
                 }
@@ -587,7 +588,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const starknetVaultAddr = await starknetC.getVaultAddress(unifiedIdentity.keyHash);
                     setStarknetVaultAddress(starknetVaultAddr);
-                    console.log('Starknet vault address:', starknetVaultAddr);
+                    logger.log('Starknet vault address:', starknetVaultAddr);
                     
                     // Check if Starknet vault exists via relayer
                     try {
@@ -596,13 +597,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                             config.relayerUrl
                         );
                         setStarknetVaultExists(vaultInfo.exists);
-                        console.log('Starknet vault exists:', vaultInfo.exists);
+                        logger.log('Starknet vault exists:', vaultInfo.exists);
                     } catch (existsError) {
-                        console.warn('Could not check Starknet vault existence:', existsError);
+                        logger.warn('Could not check Starknet vault existence:', existsError);
                         setStarknetVaultExists(false);
                     }
                 } catch (starknetError) {
-                    console.warn('Could not get Starknet vault address:', starknetError);
+                    logger.warn('Could not get Starknet vault address:', starknetError);
                     // Starknet vault may not exist yet - that's okay
                     setStarknetVaultAddress(null);
                 }
@@ -618,11 +619,11 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     setHasBackupPasskey(false);
                 }
             } catch {
-                console.warn('Could not check backup passkey status');
+                logger.warn('Could not check backup passkey status');
                 setHasBackupPasskey(false);
             }
         } catch (error) {
-            console.warn('Could not load identity:', error);
+            logger.warn('Could not load identity:', error);
             // Fallback to legacy method
             try {
                 const vaultInfo = await sdkInstance.getVaultInfo();
@@ -651,7 +652,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     ) => {
         const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL;
         if (!relayerUrl || !keyHash) {
-            console.log('Skipping non-EVM vault auto-creation: missing relayer URL or keyHash');
+            logger.log('Skipping non-EVM vault auto-creation: missing relayer URL or keyHash');
             return;
         }
 
@@ -661,7 +662,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         const aptosC = clients?.aptos ?? aptosClient;
         const starknetC = clients?.starknet ?? starknetClient;
 
-        console.log('Auto-creating vaults on Solana, Sui, Aptos, Starknet...');
+        logger.log('Auto-creating vaults on Solana, Sui, Aptos, Starknet...');
         const vaultCreationPromises: Promise<void>[] = [];
 
         // Solana vault auto-creation
@@ -670,15 +671,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const vaultInfo = await solClient.getVaultViaRelayer(keyHash, relayerUrl);
                     if (!vaultInfo.exists) {
-                        console.log('Creating Solana vault...');
+                        logger.log('Creating Solana vault...');
                         const result = await solClient.createVaultViaRelayer(keyHash, relayerUrl);
-                        console.log('Solana vault created:', result.address);
+                        logger.log('Solana vault created:', result.address);
                         setSolanaVaultExists(true);
                     } else {
                         setSolanaVaultExists(true);
                     }
                 } catch (error) {
-                    console.warn('Solana vault auto-creation failed:', error);
+                    logger.warn('Solana vault auto-creation failed:', error);
                 }
             })());
         }
@@ -689,15 +690,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const vaultInfo = await suiC.getVaultViaRelayer(keyHash, relayerUrl);
                     if (!vaultInfo.exists) {
-                        console.log('Creating Sui vault...');
+                        logger.log('Creating Sui vault...');
                         const result = await suiC.createVaultViaRelayer(keyHash, relayerUrl);
-                        console.log('Sui vault created:', result.address);
+                        logger.log('Sui vault created:', result.address);
                         setSuiVaultExists(true);
                     } else {
                         setSuiVaultExists(true);
                     }
                 } catch (error) {
-                    console.warn('Sui vault auto-creation failed:', error);
+                    logger.warn('Sui vault auto-creation failed:', error);
                 }
             })());
         }
@@ -708,15 +709,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const vaultInfo = await aptosC.getVaultViaRelayer(keyHash, relayerUrl);
                     if (!vaultInfo.exists) {
-                        console.log('Creating Aptos vault...');
+                        logger.log('Creating Aptos vault...');
                         const result = await aptosC.createVaultViaRelayer(keyHash, relayerUrl);
-                        console.log('Aptos vault created:', result.address);
+                        logger.log('Aptos vault created:', result.address);
                         setAptosVaultExists(true);
                     } else {
                         setAptosVaultExists(true);
                     }
                 } catch (error) {
-                    console.warn('Aptos vault auto-creation failed:', error);
+                    logger.warn('Aptos vault auto-creation failed:', error);
                 }
             })());
         }
@@ -727,15 +728,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     const vaultInfo = await starknetC.getVaultViaRelayer(keyHash, relayerUrl);
                     if (!vaultInfo.exists) {
-                        console.log('Creating Starknet vault...');
+                        logger.log('Creating Starknet vault...');
                         const result = await starknetC.createVaultViaRelayer(keyHash, relayerUrl);
-                        console.log('Starknet vault created (async via Hub dispatch):', result.address);
+                        logger.log('Starknet vault created (async via Hub dispatch):', result.address);
                         setStarknetVaultExists(true);
                     } else {
                         setStarknetVaultExists(true);
                     }
                 } catch (error) {
-                    console.warn('Starknet vault auto-creation failed:', error);
+                    logger.warn('Starknet vault auto-creation failed:', error);
                 }
             })());
         }
@@ -743,7 +744,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         // Wait for all vault creations (don't block on failures)
         const results = await Promise.allSettled(vaultCreationPromises);
         const fulfilled = results.filter(r => r.status === 'fulfilled').length;
-        console.log(`Non-EVM vault auto-creation complete: ${fulfilled}/${results.length} succeeded`);
+        logger.log(`Non-EVM vault auto-creation complete: ${fulfilled}/${results.length} succeeded`);
     };
 
     // ========================================================================
@@ -767,7 +768,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 [config.wormholeChainId]: balances,
             }));
         } catch (error) {
-            console.error('Error fetching balances:', error);
+            logger.error('Error fetching balances:', error);
         } finally {
             setIsLoadingBalances(false);
         }
@@ -795,7 +796,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 setVaultBalances(balances);
             }
         } catch (error) {
-            console.error(`Error fetching balances for chain ${wormholeChainId}:`, error);
+            logger.error(`Error fetching balances for chain ${wormholeChainId}:`, error);
         } finally {
             setIsLoadingBalances(false);
         }
@@ -849,7 +850,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             );
             setFormattedSpendingLimits(formatted);
         } catch (error) {
-            console.error('Error fetching spending limits:', error);
+            logger.error('Error fetching spending limits:', error);
         } finally {
             setIsLoadingSpendingLimits(false);
         }
@@ -979,7 +980,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 });
             }
         } catch (error) {
-            console.error('Error fetching Solana balance:', error);
+            logger.error('Error fetching Solana balance:', error);
             // Set zero balance on error so UI doesn't hang
             setSolanaBalance({
                 address: solanaVaultAddress,
@@ -1038,7 +1039,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 });
             }
         } catch (error) {
-            console.error('Error fetching Sui balance:', error);
+            logger.error('Error fetching Sui balance:', error);
             // Set zero balance on error so UI doesn't hang
             setSuiBalance({
                 address: suiVaultAddress,
@@ -1122,7 +1123,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 usdValue: undefined,
             });
         } catch (error) {
-            console.error('Error fetching Aptos balance:', error);
+            logger.error('Error fetching Aptos balance:', error);
             // Set zero balance on error so UI doesn't hang
             setAptosBalance({
                 address: aptosVaultAddress,
@@ -1185,7 +1186,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 });
             }
         } catch (error) {
-            console.error('Error fetching Starknet balance:', error);
+            logger.error('Error fetching Starknet balance:', error);
             // Set zero balance on error
             setStarknetBalance({
                 address: starknetVaultAddress,
@@ -1214,7 +1215,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     return sdk.getVaultAddressForChain(wormholeChainId, identity.keyHash);
                 } catch (error) {
-                    console.warn(`Failed to derive vault address for chain ${wormholeChainId}:`, error);
+                    logger.warn(`Failed to derive vault address for chain ${wormholeChainId}:`, error);
                     // Fallback to hub vault address (may be wrong, but better than null)
                     return vaultAddress;
                 }
@@ -1230,7 +1231,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             case 40:    // Sei Atlantic-2
                 // Without SDK, we can't compute the correct address
                 // Return vaultAddress as fallback (this may show wrong balances)
-                console.warn(`SDK not available, returning hub vault address for chain ${wormholeChainId}`);
+                logger.warn(`SDK not available, returning hub vault address for chain ${wormholeChainId}`);
                 return vaultAddress;
             
             // Solana
@@ -1250,7 +1251,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 return starknetVaultAddress;
             
             default:
-                console.warn(`Unknown chain ID: ${wormholeChainId}`);
+                logger.warn(`Unknown chain ID: ${wormholeChainId}`);
                 return null;
         }
     }, [sdk, identity?.keyHash, vaultAddress, solanaVaultAddress, suiVaultAddress, aptosVaultAddress, starknetVaultAddress]);
@@ -1357,7 +1358,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Set the vault address from the result
             if (result.address) {
                 setStarknetVaultAddress(result.address);
-                console.log('Starknet vault created:', result.address);
+                logger.log('Starknet vault created:', result.address);
             }
             setStarknetVaultExists(true);
             
@@ -1434,18 +1435,18 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         
         setIsLoading(true);
         try {
-            console.log('[Veridex] Starting gasless transfer:', params);
+            logger.log('[Veridex] Starting gasless transfer:', params);
             const result = await sdk.transferViaRelayer(params, (state) => {
                 updatePendingTransactions();
             });
-            console.log('[Veridex] Gasless transfer successful:', result);
+            logger.log('[Veridex] Gasless transfer successful:', result);
             
             // Refresh balances after transfer
             await refreshBalances();
             
             return result;
         } catch (err: any) {
-            console.error('[Veridex] Gasless transfer failed:', err?.message || err);
+            logger.error('[Veridex] Gasless transfer failed:', err?.message || err);
             throw err;
         } finally {
             setIsLoading(false);
@@ -1466,20 +1467,20 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         
         setIsLoading(true);
         try {
-            console.log('[Veridex] Starting gasless bridge:', params);
+            logger.log('[Veridex] Starting gasless bridge:', params);
             const result = await sdk.bridgeViaRelayer(params, (progress) => {
                 setBridgeProgress(progress);
                 onProgress?.(progress);
                 updatePendingBridges();
             });
-            console.log('[Veridex] Gasless bridge successful:', result);
+            logger.log('[Veridex] Gasless bridge successful:', result);
             
             // Refresh balances after bridge
             await refreshBalances();
             
             return result;
         } catch (err: any) {
-            console.error('[Veridex] Gasless bridge failed:', err?.message || err);
+            logger.error('[Veridex] Gasless bridge failed:', err?.message || err);
             throw err;
         } finally {
             setIsLoading(false);
@@ -1601,7 +1602,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
             return result;
         } catch (error) {
-            console.error('Sponsored vault creation error:', error);
+            logger.error('Sponsored vault creation error:', error);
             throw error;
         } finally {
             setIsCreatingSponsoredVaults(false);
@@ -1630,7 +1631,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
             // Save to relayer for cross-device recovery (fire and forget)
             sdk.passkey.saveCredentialToRelayer().catch(err => {
-                console.warn('Failed to save credential to relayer (cross-device recovery may not work):', err);
+                logger.warn('Failed to save credential to relayer (cross-device recovery may not work):', err);
             });
 
             // Load identity which includes deterministic vault address
@@ -1639,18 +1640,18 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Automatically create vaults on all chains using gas sponsorship
             // This makes the experience truly gasless for the user
             if (sdk.isSponsorshipAvailable()) {
-                console.log('Auto-creating vaults on all chains (sponsored)...');
+                logger.log('Auto-creating vaults on all chains (sponsored)...');
                 setIsCreatingSponsoredVaults(true);
                 try {
                     // SDK uses the internal credential's keyHash
                     const vaultResult = await sdk.ensureSponsoredVaultsOnAllChains();
                     setSponsoredVaultStatus(vaultResult);
-                    console.log('Sponsored vaults created:', vaultResult);
+                    logger.log('Sponsored vaults created:', vaultResult);
                     
                     // Refresh identity to update vault deployment status
                     await loadIdentity(sdk);
                 } catch (vaultError) {
-                    console.warn('Auto vault creation failed (can be retried manually):', vaultError);
+                    logger.warn('Auto vault creation failed (can be retried manually):', vaultError);
                     // Don't throw - registration was successful, vault creation is optional
                 } finally {
                     setIsCreatingSponsoredVaults(false);
@@ -1660,7 +1661,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Auto-create vaults on non-EVM chains via relayer
             await autoCreateNonEvmVaults(cred.keyHash);
         } catch (error) {
-            console.error('Registration error:', error);
+            logger.error('Registration error:', error);
             throw error;
         } finally {
             setIsLoading(false);
@@ -1687,7 +1688,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
             // Auto-create vaults on chains where they don't exist (sponsored)
             if (sdk.isSponsorshipAvailable()) {
-                console.log('Checking vaults on all chains...');
+                logger.log('Checking vaults on all chains...');
                 setIsCreatingSponsoredVaults(true);
                 try {
                     // ensureSponsoredVaultsOnAllChains only creates vaults where they don't exist
@@ -1696,15 +1697,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     // Only show status if any vaults were created (not just already existing)
                     const newlyCreated = vaultResult.results.filter(r => r.success && !r.alreadyExists);
                     if (newlyCreated.length > 0) {
-                        console.log('Created vaults on:', newlyCreated.map(r => r.chain).join(', '));
+                        logger.log('Created vaults on:', newlyCreated.map(r => r.chain).join(', '));
                         setSponsoredVaultStatus(vaultResult);
                         // Refresh identity to update vault deployment status
                         await loadIdentity(sdk);
                     } else {
-                        console.log('All vaults already exist');
+                        logger.log('All vaults already exist');
                     }
                 } catch (vaultError) {
-                    console.warn('Vault check/creation failed (can be retried manually):', vaultError);
+                    logger.warn('Vault check/creation failed (can be retried manually):', vaultError);
                     // Don't throw - login was successful, vault creation is optional
                 } finally {
                     setIsCreatingSponsoredVaults(false);
@@ -1714,7 +1715,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Auto-create vaults on non-EVM chains via relayer
             await autoCreateNonEvmVaults(cred.keyHash);
         } catch (error) {
-            console.error('Login error:', error);
+            logger.error('Login error:', error);
             throw error;
         } finally {
             setIsLoading(false);
@@ -1783,7 +1784,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             setSigner(walletSigner);
             setAddress(walletAddress);
         } catch (error) {
-            console.error('Wallet connection error:', error);
+            logger.error('Wallet connection error:', error);
             throw error;
         } finally {
             setIsLoading(false);
@@ -1864,7 +1865,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 setHasBackupPasskey(false);
             }
         } catch (err) {
-            console.warn('Failed to check backup passkey status:', err);
+            logger.warn('Failed to check backup passkey status:', err);
             setHasBackupPasskey(false);
         }
     };
@@ -1893,7 +1894,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
 
             // Add the backup passkey to the identity
             const result = await (sdk as any).addBackupPasskey(backupCred, signer);
-            console.log('Backup passkey added:', result);
+            logger.log('Backup passkey added:', result);
 
             // Update backup status
             setHasBackupPasskey(true);

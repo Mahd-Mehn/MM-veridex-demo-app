@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { logger } from '@/lib/logger';
 
 interface SocialShareModalProps {
   isOpen: boolean;
@@ -133,7 +134,7 @@ This is what mainstream crypto adoption requires. The tech is here.`;
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error('Failed to copy:', err);
     }
   };
 

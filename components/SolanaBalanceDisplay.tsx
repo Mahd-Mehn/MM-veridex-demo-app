@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useVeridex } from '../lib/VeridexContext';
+import { logger } from '@/lib/logger';
 
 const formatSolBalance = (sol: number): string => {
     if (sol === 0) return '0';
@@ -53,7 +54,7 @@ export function SolanaBalanceCard({ className = '', showReceiveButton = true }: 
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            console.error('Failed to copy address');
+            logger.error('Failed to copy address');
         }
     };
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/lib/logger';
+
 /**
  * Spending Limits Settings Component (Issue #27)
  * 
@@ -200,7 +202,7 @@ export function SpendingSettings({
       await onSetDailyLimit(newLimit);
       setEditingDaily(false);
     } catch (err) {
-      console.error('Failed to set daily limit:', err);
+      logger.error('Failed to set daily limit:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -214,7 +216,7 @@ export function SpendingSettings({
       await onSetTransactionLimit(newLimit);
       setEditingTx(false);
     } catch (err) {
-      console.error('Failed to set transaction limit:', err);
+      logger.error('Failed to set transaction limit:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -230,7 +232,7 @@ export function SpendingSettings({
         await onPauseVault?.();
       }
     } catch (err) {
-      console.error('Failed to toggle pause:', err);
+      logger.error('Failed to toggle pause:', err);
     } finally {
       setIsSubmitting(false);
     }
