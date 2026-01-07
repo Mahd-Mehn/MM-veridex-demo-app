@@ -48,7 +48,7 @@ function getRpcUrls(): Partial<Record<ChainName, string>> {
  */
 function getRelayerConfig(): Pick<SimpleSDKConfig, 'relayerUrl' | 'relayerApiKey'> {
     return {
-        relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001',
+        relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app',
         relayerApiKey: process.env.NEXT_PUBLIC_RELAYER_API_KEY,
     };
 }
