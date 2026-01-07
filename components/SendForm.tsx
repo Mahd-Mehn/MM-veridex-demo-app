@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { TokenInfo, PreparedTransfer, CrossChainProgress } from '@veridex/sdk';
 import { ethers } from 'ethers';
+import { logger } from '@/lib/logger';
 
 // Chain options for cross-chain transfers (includes both EVM and non-EVM chains)
 const CHAIN_OPTIONS = [
@@ -227,7 +228,7 @@ export function SendForm({
                         recipient: prepared.params.recipient,
                         amount: prepared.params.amount,
                     };
-                    console.log('[SendForm] Cross-chain transfer detected, using bridge:', bridgeParams);
+                    logger.log('[SendForm] Cross-chain transfer detected, using bridge:', bridgeParams);
                     const result = await onBridgeGasless(bridgeParams);
                     setTxHash(result.transactionHash);
                     setSequence(result.sequence);
@@ -235,7 +236,7 @@ export function SendForm({
                     return;
                 } else if (onSendGasless) {
                     // Same-chain transfer
-                    console.log('[SendForm] Same-chain transfer:', prepared.params);
+                    logger.log('[SendForm] Same-chain transfer:', prepared.params);
                     const result = await onSendGasless(prepared.params);
                     setTxHash(result.transactionHash);
                     setSequence(result.sequence);

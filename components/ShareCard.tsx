@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import html2canvas from 'html2canvas';
+import { logger } from '@/lib/logger';
 
 interface VaultAddresses {
   base?: string | null;
@@ -57,7 +58,7 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
         canvas.toBlob((blob) => resolve(blob), 'image/png', 1.0);
       });
     } catch (err) {
-      console.error('Failed to capture card:', err);
+      logger.error('Failed to capture card:', err);
       return null;
     }
   }, []);
@@ -106,7 +107,7 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
             return;
           } catch (err) {
             // User cancelled or share with image failed, try without image
-            console.log('Share with image cancelled or failed, trying without');
+            logger.log('Share with image cancelled or failed, trying without');
           }
         }
       }
