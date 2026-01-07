@@ -24,7 +24,16 @@ async function proxyRequest(
   method: string,
   pathSegments: string[]
 ): Promise<NextResponse> {
-  const path = pathSegments.join('/');
+  // Join path segments and strip any leading 'api/v1' since we add it ourselves
+  let path = pathSegments.join('/');
+  
+  // Handle case where SDK sends /api/relayer/api/v1/... (strip duplicate api/v1)
+  if (path.startsWith('api/v1/')) {
+    path = path.slice(7); // Remove 'api/v1/'
+  } else if (path.startsWith('api/v1')) {
+    path = path.slice(6); // Remove 'api/v1' (no trailing slash)
+  }
+  
   const targetUrl = `${RELAYER_URL}/api/v1/${path}`;
 
   try {
