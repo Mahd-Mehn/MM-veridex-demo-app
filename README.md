@@ -237,7 +237,13 @@ The app features:
 - [Veridex Protocol Documentation](https://github.com/Veridex-Protocol/demo)
 - [WebAuthn Guide](https://webauthn.guide/)
 - [Wormhole Documentation](https://docs.wormhole.com/)
-- [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet)
+
+### Testnet Faucets
+
+- **EVM Chains (Base, Optimism)**: [Optimism Faucet](https://console.optimism.io/faucet)
+- **Arbitrum, Aptos & other chains**: [HackQuest Faucets](https://www.hackquest.io/faucets)
+- **Solana Devnet**: [Solana Faucet](https://faucet.solana.com/)
+- **Sui Testnet**: [Sui Faucet](https://faucet.sui.io/)
 
 ##  Project Structure
 
@@ -259,6 +265,12 @@ test-app/
 - Never use real funds or production keys
 - Passkeys are stored in localStorage (not recommended for production)
 - Always verify transactions before signing
+
+## 💬 Need Help?
+
+If you run into any issues or have questions, reach out to us on Telegram:
+
+👉 **[Join our Telegram](https://t.me/+esxlkvlnsAJlMTdk)**
 
 ## NOTE License
 

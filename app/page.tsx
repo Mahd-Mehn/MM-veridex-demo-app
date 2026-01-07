@@ -462,21 +462,22 @@ export default function Home() {
             <span className="text-white font-bold text-lg">Veridex</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Wallet Connection Status */}
             {!isConnected ? (
               <button
                 onClick={handleConnectWallet}
                 disabled={loading}
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium rounded-lg hover:from-orange-600 hover:to-red-600 transition text-sm"
+                className="px-3 sm:px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-medium rounded-lg hover:from-orange-600 hover:to-red-600 transition text-xs sm:text-sm"
               >
-                Connect Wallet
+                <span className="hidden sm:inline">Connect Wallet</span>
+                <span className="sm:hidden">Connect</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white/10 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-green-400" />
-                <span className="text-white text-sm font-mono">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
+                <span className="text-white text-xs sm:text-sm font-mono">
+                  {address?.slice(0, 4)}...{address?.slice(-4)}
                 </span>
               </div>
             )}
@@ -574,7 +575,7 @@ export default function Home() {
               ? 'bg-gradient-to-br from-orange-900/30 to-pink-900/30 border-orange-500/30'
               : 'bg-white/10 border-white/20'
           }`}>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h3 className="text-white font-semibold">Your Vault</h3>
               <ChainTabs selectedChainId={selectedChain} onSelect={setSelectedChain} />
             </div>
@@ -817,7 +818,7 @@ export default function Home() {
         )}
 
         {/* Action Buttons - Always show when registered */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <button
             onClick={() => {
               // Check for appropriate address based on chain

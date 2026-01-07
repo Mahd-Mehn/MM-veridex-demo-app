@@ -21,11 +21,11 @@ export function TestnetFaucet({ vaultAddress, chainName, onSuccess }: TestnetFau
 
   // Faucet URLs for different chains
   const faucetUrls: Record<string, string> = {
-    'Base Sepolia': 'https://www.alchemy.com/faucets/base-sepolia',
-    'Optimism Sepolia': 'https://www.alchemy.com/faucets/optimism-sepolia',
-    'Arbitrum Sepolia': 'https://www.alchemy.com/faucets/arbitrum-sepolia',
+    'Base Sepolia': 'https://console.optimism.io/faucet',
+    'Optimism Sepolia': 'https://console.optimism.io/faucet',
+    'Arbitrum Sepolia': 'https://www.hackquest.io/faucets',
     'Solana Devnet': 'https://faucet.solana.com/',
-    'Aptos Testnet': 'https://www.aptosfaucet.com/',
+    'Aptos Testnet': 'https://aptos.dev/network/faucet',
     'Sui Testnet': 'https://faucet.sui.io/',
   };
 
