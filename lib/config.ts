@@ -23,8 +23,9 @@ export const config = {
     // Factory deployed on Base Sepolia for local vault creation
     vaultFactory: '0xCFaEb5652aa2Ee60b2229dC8895B4159749C7e53',
     vaultImplementation: '0x0d13367C16c6f0B24eD275CC67C7D9f42878285c',
-    // Relayer URL for gasless transactions
-    relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app',
+    // Relayer URL - uses local proxy to hide backend URL from browser
+    // The proxy forwards to RELAYER_BACKEND_URL (server-side only)
+    relayerUrl: '/api/relayer',
 };
 
 // Spoke Chain Configurations

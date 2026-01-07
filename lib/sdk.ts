@@ -45,10 +45,11 @@ function getRpcUrls(): Partial<Record<ChainName, string>> {
 
 /**
  * Get relayer configuration from environment
+ * Uses local /api/relayer proxy to hide backend URL from browser Network tab
  */
 function getRelayerConfig(): Pick<SimpleSDKConfig, 'relayerUrl' | 'relayerApiKey'> {
     return {
-        relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app',
+        relayerUrl: '/api/relayer',
         relayerApiKey: process.env.NEXT_PUBLIC_RELAYER_API_KEY,
     };
 }

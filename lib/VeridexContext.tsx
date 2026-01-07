@@ -37,6 +37,10 @@ import { ethers } from 'ethers';
 import { config, spokeConfigs, solanaConfig, suiConfig, aptosConfig, starknetConfig } from '@/lib/config';
 import { logger } from '@/lib/logger';
 
+// Relayer proxy URL - hides backend URL from browser Network tab
+// Uses local /api/relayer which proxies to the actual relayer backend
+const RELAYER_PROXY_URL = '/api/relayer';
+
 // Multi-chain vault addresses type
 export interface MultiChainVaultAddresses {
     /** EVM vault address (Base Sepolia) */
@@ -299,7 +303,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     persistWallet: true,
                     testnet: true,
                     // Relayer for remote sponsorship (future primary method)
-                    relayerUrl: process.env.NEXT_PUBLIC_RELAYER_URL,
+                    relayerUrl: RELAYER_PROXY_URL,
                     relayerApiKey: process.env.NEXT_PUBLIC_RELAYER_API_KEY,
                     // Wormhole Query Proxy API key (rate limit: 6 queries/sec)
                     queryApiKey: process.env.NEXT_PUBLIC_WORMHOLE_QUERY_API_KEY,
@@ -381,7 +385,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                         logger.log('Returning user detected, checking/creating non-EVM vaults...');
                         // Note: We need to define autoCreateNonEvmVaults before this useEffect runs
                         // For now, inline the vault creation check
-                        const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL;
+                        const relayerUrl = RELAYER_PROXY_URL;
                         if (relayerUrl) {
                             const vaultPromises: Promise<void>[] = [];
                             
@@ -650,7 +654,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             starknet?: StarknetClient | null;
         }
     ) => {
-        const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL;
+        const relayerUrl = RELAYER_PROXY_URL;
         if (!relayerUrl || !keyHash) {
             logger.log('Skipping non-EVM vault auto-creation: missing relayer URL or keyHash');
             return;
