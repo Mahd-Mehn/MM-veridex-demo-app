@@ -424,9 +424,17 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                             vaultPromises.push((async () => {
                                 try {
                                     const info = await aptosClientInstance.getVaultViaRelayer(savedCred.keyHash, relayerUrl);
+                                    // Always set the vault address if available (it's deterministic)
+                                    if (info.vaultAddress) {
+                                        setAptosVaultAddress(info.vaultAddress);
+                                        logger.log('Aptos vault address:', info.vaultAddress);
+                                    }
                                     if (!info.exists) {
                                         logger.log('Creating Aptos vault for returning user...');
-                                        await aptosClientInstance.createVaultViaRelayer(savedCred.keyHash, relayerUrl);
+                                        const createResult = await aptosClientInstance.createVaultViaRelayer(savedCred.keyHash, relayerUrl);
+                                        if (createResult.address) {
+                                            setAptosVaultAddress(createResult.address);
+                                        }
                                         setAptosVaultExists(true);
                                     } else {
                                         setAptosVaultExists(true);
@@ -576,10 +584,11 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                         unifiedIdentity.keyHash,
                         config.relayerUrl
                     );
-                    if (vaultInfo.exists && vaultInfo.vaultAddress) {
+                    // Aptos vault addresses are deterministic - accept the address even if exists is false
+                    if (vaultInfo.vaultAddress) {
                         setAptosVaultAddress(vaultInfo.vaultAddress);
-                        setAptosVaultExists(true);
-                        logger.log('Aptos vault address (from relayer):', vaultInfo.vaultAddress);
+                        setAptosVaultExists(vaultInfo.exists);
+                        logger.log('Aptos vault address (from relayer):', vaultInfo.vaultAddress, 'exists:', vaultInfo.exists);
                     } else {
                         // Try direct on-chain query as fallback
                         const aptosVaultAddr = await aptosC.getVaultAddress(unifiedIdentity.keyHash);
