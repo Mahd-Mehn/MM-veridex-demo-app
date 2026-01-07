@@ -124,19 +124,19 @@ interface ChainTabsProps {
 
 export function ChainTabs({ selectedChainId, onSelect }: ChainTabsProps) {
     return (
-        <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1 bg-white/5 rounded-xl max-w-full overflow-x-auto">
             {SUPPORTED_CHAINS.map((chain) => (
                 <button
                     key={chain.id}
                     onClick={() => onSelect(chain.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all whitespace-nowrap text-xs sm:text-sm ${
                         chain.id === selectedChainId
                             ? 'bg-white/10 text-white shadow'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
-                    <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${chain.color}`} />
-                    <span className="text-sm font-medium">{chain.symbol}</span>
+                    <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${chain.color} flex-shrink-0`} />
+                    <span className="font-medium">{chain.symbol}</span>
                 </button>
             ))}
         </div>
