@@ -568,23 +568,33 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 }
             }
 
-            // Get Aptos vault address from on-chain registry (async)
+            // Get Aptos vault address from relayer (more reliable than direct on-chain query)
             if (aptosC && unifiedIdentity.keyHash) {
                 try {
-                    // Use async getVaultAddress which queries the on-chain VaultRegistry
-                    const aptosVaultAddr = await aptosC.getVaultAddress(unifiedIdentity.keyHash);
-                    if (aptosVaultAddr) {
-                        setAptosVaultAddress(aptosVaultAddr);
+                    // Use relayer endpoint which has fallback logic for vault address lookup
+                    const vaultInfo = await aptosC.getVaultViaRelayer(
+                        unifiedIdentity.keyHash,
+                        config.relayerUrl
+                    );
+                    if (vaultInfo.exists && vaultInfo.vaultAddress) {
+                        setAptosVaultAddress(vaultInfo.vaultAddress);
                         setAptosVaultExists(true);
-                        logger.log('Aptos vault address (from registry):', aptosVaultAddr);
+                        logger.log('Aptos vault address (from relayer):', vaultInfo.vaultAddress);
                     } else {
-                        // Vault doesn't exist in registry yet
-                        setAptosVaultAddress(null);
-                        setAptosVaultExists(false);
-                        logger.log('Aptos vault not found in registry for keyHash:', unifiedIdentity.keyHash);
+                        // Try direct on-chain query as fallback
+                        const aptosVaultAddr = await aptosC.getVaultAddress(unifiedIdentity.keyHash);
+                        if (aptosVaultAddr) {
+                            setAptosVaultAddress(aptosVaultAddr);
+                            setAptosVaultExists(true);
+                            logger.log('Aptos vault address (from registry):', aptosVaultAddr);
+                        } else {
+                            setAptosVaultAddress(null);
+                            setAptosVaultExists(false);
+                            logger.log('Aptos vault not found for keyHash:', unifiedIdentity.keyHash);
+                        }
                     }
                 } catch (aptosError) {
-                    logger.warn('Could not get Aptos vault address from registry:', aptosError);
+                    logger.warn('Could not get Aptos vault address:', aptosError);
                     setAptosVaultAddress(null);
                     setAptosVaultExists(false);
                 }
