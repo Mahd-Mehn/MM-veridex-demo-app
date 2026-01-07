@@ -1,5 +1,12 @@
 // Veridex SDK Configuration
 
+// Relayer URL handling:
+// - Production: Use /api/relayer proxy to hide backend URL from browser
+// - Development: Use direct URL (proxy may have IPv6 issues locally)
+const RELAYER_DIRECT_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app/api/v1';
+const RELAYER_PROXY_URL = '/api/relayer';
+const relayerUrl = process.env.NODE_ENV === 'production' ? RELAYER_PROXY_URL : RELAYER_DIRECT_URL;
+
 // RPC URLs from environment variables (fallback to public endpoints)
 const RPC_URLS = {
     baseSepolia: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
@@ -23,9 +30,8 @@ export const config = {
     // Factory deployed on Base Sepolia for local vault creation
     vaultFactory: '0xCFaEb5652aa2Ee60b2229dC8895B4159749C7e53',
     vaultImplementation: '0x0d13367C16c6f0B24eD275CC67C7D9f42878285c',
-    // Relayer URL - uses local proxy to hide backend URL from browser
-    // The proxy forwards to RELAYER_BACKEND_URL (server-side only)
-    relayerUrl: '/api/relayer',
+    // Relayer URL - production uses proxy, dev uses direct URL
+    relayerUrl,
 };
 
 // Spoke Chain Configurations
