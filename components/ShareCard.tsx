@@ -47,12 +47,63 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
     if (!cardRef.current) return null;
     
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 2, // Higher resolution
+      // Clone the element and convert oklch colors to rgb for html2canvas compatibility
+      const clone = cardRef.current.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '-9999px';
+      document.body.appendChild(clone);
+      
+      // Convert oklch colors to fallback colors
+      const convertOklchColors = (element: HTMLElement) => {
+        const computed = window.getComputedStyle(element);
+        const props = ['color', 'backgroundColor', 'borderColor'];
+        props.forEach(prop => {
+          const value = computed.getPropertyValue(prop);
+          if (value.includes('oklch')) {
+            // Fallback to a solid color based on the element's context
+            if (prop === 'color') {
+              element.style.color = 'white';
+            } else if (prop === 'backgroundColor') {
+              element.style.backgroundColor = '#1e1b4b'; // dark purple fallback
+            }
+          }
+        });
+        // Also check gradients in background-image
+        const bgImage = computed.getPropertyValue('background-image');
+        if (bgImage.includes('oklch')) {
+          // Keep the gradient but it may render as transparent
+          // The inline styles in the component should handle this
+        }
+        
+        Array.from(element.children).forEach(child => {
+          if (child instanceof HTMLElement) {
+            convertOklchColors(child);
+          }
+        });
+      };
+      
+      convertOklchColors(clone);
+      
+      const canvas = await html2canvas(clone, {
+        backgroundColor: '#0f0a1f', // Fallback dark background
+        scale: 2,
         useCORS: true,
         logging: false,
+        // Remove unsupported CSS functions
+        onclone: (doc) => {
+          // Additional cleanup if needed
+          const style = doc.createElement('style');
+          style.textContent = `
+            * {
+              --tw-ring-color: rgba(139, 92, 246, 0.5) !important;
+            }
+          `;
+          doc.head.appendChild(style);
+        }
       });
+      
+      document.body.removeChild(clone);
       
       return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), 'image/png', 1.0);
@@ -155,51 +206,71 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
 
   return (
     <div className="relative">
-      {/* The shareable card */}
+      {/* The shareable card - using inline styles for html2canvas compatibility */}
       <div
         ref={cardRef}
-        className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-3xl p-8 border border-white/20 shadow-2xl"
-        style={{ minWidth: '340px', maxWidth: '420px' }}
+        className="relative overflow-hidden rounded-3xl p-8 shadow-2xl"
+        style={{ 
+          minWidth: '340px', 
+          maxWidth: '420px',
+          background: 'linear-gradient(to bottom right, #0f172a, #581c87, #0f172a)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+        }}
       >
         {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-pink-500/30 to-purple-500/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-500/20 to-cyan-500/20 rounded-full blur-2xl" />
+        <div 
+          className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl" 
+          style={{ background: 'linear-gradient(to bottom right, rgba(236, 72, 153, 0.3), rgba(168, 85, 247, 0.3))' }}
+        />
+        <div 
+          className="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-2xl" 
+          style={{ background: 'linear-gradient(to top right, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))' }}
+        />
 
         {/* Content */}
         <div className="relative z-10">
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+            <div 
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+              style={{ background: 'linear-gradient(to bottom right, #a855f7, #ec4899)' }}
+            >
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-white font-bold text-xl">Veridex</h3>
-              <p className="text-gray-400 text-sm">Passkey Wallet</p>
+              <h3 style={{ color: 'white', fontWeight: 'bold', fontSize: '1.25rem' }}>Veridex</h3>
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Passkey Wallet</p>
             </div>
           </div>
 
           {/* Achievement Banner */}
-          <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-2xl p-4 mb-6 border border-pink-500/30">
+          <div 
+            className="rounded-2xl p-4 mb-6"
+            style={{ 
+              background: 'linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2))',
+              border: '1px solid rgba(236, 72, 153, 0.3)'
+            }}
+          >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🎉</span>
-              <span className="text-white font-semibold">Wallet Created!</span>
+              <span style={{ color: 'white', fontWeight: '600' }}>Wallet Created!</span>
             </div>
-            <p className="text-gray-300 text-sm">
+            <p style={{ color: '#d1d5db', fontSize: '0.875rem' }}>
               I just created a cross-chain wallet with my fingerprint 🤯
             </p>
           </div>
 
           {/* User Info */}
           <div className="mb-6">
-            <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Identity</p>
-            <p className="text-white font-mono text-lg">@{username}</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Identity</p>
+            <p style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.125rem' }}>@{username}</p>
           </div>
 
           {/* Chain Addresses */}
           <div className="space-y-2 mb-6">
-            <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">
+            <p style={{ color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
               {activeChains} Chain{activeChains !== 1 ? 's' : ''} Connected
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -209,13 +280,13 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
                 return (
                   <div
                     key={chain}
-                    className={`bg-gradient-to-r ${chainInfo?.color || 'from-gray-500 to-gray-600'} bg-opacity-20 rounded-lg px-3 py-2 flex items-center gap-2`}
-                    style={{ background: `linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))` }}
+                    className="rounded-lg px-3 py-2 flex items-center gap-2"
+                    style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))' }}
                   >
                     <span className="text-sm">{chainInfo?.icon || '⬡'}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-xs font-medium">{chainInfo?.name || chain}</p>
-                      <p className="text-gray-400 text-[10px] font-mono truncate">
+                      <p style={{ color: 'white', fontSize: '0.75rem', fontWeight: '500' }}>{chainInfo?.name || chain}</p>
+                      <p style={{ color: '#9ca3af', fontSize: '10px', fontFamily: 'monospace' }} className="truncate">
                         {truncateAddress(address)}
                       </p>
                     </div>
@@ -226,13 +297,13 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/10">
+          <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-xs">No seed phrase</span>
-              <span className="text-gray-600">•</span>
-              <span className="text-gray-400 text-xs">No gas fees</span>
+              <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>No seed phrase</span>
+              <span style={{ color: '#4b5563' }}>•</span>
+              <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>No gas fees</span>
             </div>
-            <div className="text-gray-500 text-xs">demo.veridex.network</div>
+            <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>demo.veridex.network</div>
           </div>
         </div>
         
