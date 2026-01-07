@@ -11,13 +11,14 @@
     "format": "biome format --write"
   },
   "dependencies": {
-    "@veridex/sdk": "^1.0.0-beta.12",
+    "@veridex/sdk": "^1.0.0-beta.13",
     "ethers": "^6.16.0",
     "html2canvas": "^1.4.1",
     "next": "16.0.10",
     "qrcode": "^1.5.4",
     "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react-dom": "19.2.1",
+    "update": "^0.7.4"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
