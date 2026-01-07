@@ -1338,6 +1338,12 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 config.relayerUrl
             );
             
+            // Set the vault address from the result (works for both new and existing vaults)
+            if (result.address) {
+                setAptosVaultAddress(result.address);
+                logger.log('Aptos vault address:', result.address, result.alreadyExisted ? '(already existed)' : '(newly created)');
+            }
+            
             // Update vault exists state
             setAptosVaultExists(true);
             
