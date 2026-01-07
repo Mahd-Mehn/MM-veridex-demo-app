@@ -52,9 +52,11 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
       clone.style.top = '-9999px';
+      // Force explicit dimensions to avoid layout issues
+      clone.style.width = cardRef.current.offsetWidth + 'px';
       document.body.appendChild(clone);
       
-      // Convert oklch colors to fallback colors
+      // Convert oklch colors to fallback colors and fix layout issues
       const convertOklchColors = (element: HTMLElement) => {
         const computed = window.getComputedStyle(element);
         const props = ['color', 'backgroundColor', 'borderColor'];
@@ -76,6 +78,21 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
           // The inline styles in the component should handle this
         }
         
+        // Force text rendering for monospace elements
+        if (computed.fontFamily.includes('monospace') || computed.fontFamily.includes('ui-monospace')) {
+          element.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+          element.style.letterSpacing = '0.02em';
+        }
+        
+        // Ensure truncated text shows properly
+        if (element.classList.contains('truncate') || computed.textOverflow === 'ellipsis') {
+          const text = element.textContent || '';
+          element.style.whiteSpace = 'nowrap';
+          element.style.overflow = 'hidden';
+          element.style.textOverflow = 'ellipsis';
+          element.style.display = 'block';
+        }
+        
         Array.from(element.children).forEach(child => {
           if (child instanceof HTMLElement) {
             convertOklchColors(child);
@@ -90,13 +107,19 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
         scale: 2,
         useCORS: true,
         logging: false,
+        width: cardRef.current.offsetWidth,
+        height: cardRef.current.offsetHeight,
         // Remove unsupported CSS functions
         onclone: (doc) => {
-          // Additional cleanup if needed
+          // Additional cleanup and font forcing
           const style = doc.createElement('style');
           style.textContent = `
             * {
               --tw-ring-color: rgba(139, 92, 246, 0.5) !important;
+            }
+            [style*="monospace"], [style*="ui-monospace"] {
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+              letter-spacing: 0.02em !important;
             }
           `;
           doc.head.appendChild(style);
@@ -281,12 +304,24 @@ export function ShareCard({ username, vaultAddresses, onShare }: ShareCardProps)
                   <div
                     key={chain}
                     className="rounded-lg px-3 py-2 flex items-center gap-2"
-                    style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))' }}
+                    style={{ 
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                      minWidth: 0,
+                    }}
                   >
-                    <span className="text-sm">{chainInfo?.icon || '⬡'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p style={{ color: 'white', fontSize: '0.75rem', fontWeight: '500' }}>{chainInfo?.name || chain}</p>
-                      <p style={{ color: '#9ca3af', fontSize: '10px', fontFamily: 'monospace' }} className="truncate">
+                    <span style={{ fontSize: '0.875rem', flexShrink: 0 }}>{chainInfo?.icon || '⬡'}</span>
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <p style={{ color: 'white', fontSize: '0.75rem', fontWeight: '500', margin: 0 }}>{chainInfo?.name || chain}</p>
+                      <p style={{ 
+                        color: '#9ca3af', 
+                        fontSize: '9px', 
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                        margin: 0,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        letterSpacing: '0.02em',
+                      }}>
                         {truncateAddress(address)}
                       </p>
                     </div>
