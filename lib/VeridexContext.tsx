@@ -1236,8 +1236,8 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const getVaultAddressForChain = useCallback((wormholeChainId: number): string | null => {
         // For EVM chains, use SDK's method to compute the correct per-chain address
         if (sdk && identity?.keyHash) {
-            const isEvmChain = wormholeChainId === 10004 || wormholeChainId === 10005 ||
-                wormholeChainId === 10003 || wormholeChainId === 40;
+            const isEvmChain = wormholeChainId === 10004 || wormholeChainId === 10002 ||
+                wormholeChainId === 10005 || wormholeChainId === 10003 || wormholeChainId === 40;
             if (isEvmChain) {
                 try {
                     return sdk.getVaultAddressForChain(wormholeChainId, identity.keyHash);
@@ -1253,6 +1253,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // EVM chains - fallback when SDK not available
             case 10004: // Base Sepolia (hub)
                 return vaultAddress;
+            case 10002: // Ethereum Sepolia
             case 10005: // Optimism Sepolia
             case 10003: // Arbitrum Sepolia
             case 40:    // Sei Atlantic-2
