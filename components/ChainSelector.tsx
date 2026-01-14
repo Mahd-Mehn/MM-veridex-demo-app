@@ -20,6 +20,7 @@ export const SUPPORTED_CHAINS: ChainOption[] = [
     { id: 10004, name: 'Base Sepolia', symbol: 'BASE', color: 'from-blue-500 to-blue-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia.basescan.org' },
     { id: 10005, name: 'Optimism Sepolia', symbol: 'OP', color: 'from-red-500 to-red-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia-optimism.etherscan.io' },
     { id: 10003, name: 'Arbitrum Sepolia', symbol: 'ARB', color: 'from-cyan-500 to-blue-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia.arbiscan.io' },
+    { id: 10002, name: 'Ethereum Sepolia', symbol: 'ETH', color: 'from-indigo-500 to-purple-600', isEvm: true, nativeToken: 'ETH', explorerUrl: 'https://sepolia.etherscan.io' },
     { id: 1, name: 'Solana Devnet', symbol: 'SOL', color: 'from-purple-500 to-cyan-400', isEvm: false, nativeToken: 'SOL', explorerUrl: 'https://explorer.solana.com' },
     { id: 21, name: 'Sui Testnet', symbol: 'SUI', color: 'from-cyan-500 to-teal-500', isEvm: false, nativeToken: 'SUI', explorerUrl: 'https://suiscan.xyz/testnet' },
     { id: 22, name: 'Aptos Testnet', symbol: 'APT', color: 'from-green-500 to-emerald-600', isEvm: false, nativeToken: 'APT', explorerUrl: 'https://explorer.aptoslabs.com' },
@@ -38,6 +39,9 @@ export const isAptosChain = (chainId: number): boolean => chainId === 22;
 
 /** Helper to check if a chain is Starknet */
 export const isStarknetChain = (chainId: number): boolean => chainId === 50001;
+
+/** Helper to check if a chain is Ethereum Sepolia */
+export const isEthereumChain = (chainId: number): boolean => chainId === 10002;
 
 /** Helper to check if a chain is EVM */
 export const isEvmChain = (chainId: number): boolean => {

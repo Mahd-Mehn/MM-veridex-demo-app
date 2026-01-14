@@ -12,6 +12,7 @@ const RPC_URLS = {
     baseSepolia: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
     optimismSepolia: process.env.NEXT_PUBLIC_OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
     arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+    ethereumSepolia: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
     starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/tsOnfTBZDKMXcUA26OED-',
     suiTestnet: process.env.NEXT_PUBLIC_SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
     aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://aptos-testnet.g.alchemy.com/v2/tsOnfTBZDKMXcUA26OED-',
@@ -57,6 +58,17 @@ export const spokeConfigs = {
         explorerUrl: 'https://sepolia.arbiscan.io',
         vaultFactory: '0xd36D3D5DB59d78f1E33813490F72DABC15C9B07c',
         vaultImplementation: '0xB10ACf39eBF17fc33F722cBD955b7aeCB0611bc4',
+    },
+    ethereumSepolia: {
+        chainId: 11155111,
+        wormholeChainId: 10002,
+        rpcUrl: RPC_URLS.ethereumSepolia,
+        wormholeCoreBridge: '0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78',
+        wormholeTokenBridge: '0xDB5492265f6038831E89f495670FF909aDe94bd9',
+        chainName: 'Ethereum Sepolia',
+        explorerUrl: 'https://sepolia.etherscan.io',
+        vaultFactory: '0x07F608AFf6d63b68029488b726d895c4Bb593038',
+        vaultImplementation: '0xD66153fccFB6731fB6c4944FbD607ba86A76a1f6',
     },
 };
 

@@ -1,10 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { 
-    VeridexSDK, 
-    PasskeyCredential, 
-    UnifiedIdentity, 
+import {
+    VeridexSDK,
+    PasskeyCredential,
+    UnifiedIdentity,
     VaultCreationResult,
     TokenBalance,
     PortfolioBalance,
@@ -107,7 +107,7 @@ interface VeridexContextType {
     vaultAddress: string | null;
     vaultDeployed: boolean;
     isLoading: boolean;
-    
+
     // Phase 1: Authentication & Identity
     register: (username: string, displayName: string) => Promise<void>;
     login: () => Promise<void>;
@@ -118,13 +118,13 @@ interface VeridexContextType {
     hasStoredCredential: () => boolean;
     createVault: () => Promise<VaultCreationResult>;
     refreshIdentity: () => Promise<void>;
-    
+
     // Sponsored Vault Creation (Gasless)
     createSponsoredVaults: () => Promise<MultiChainVaultResult>;
     isSponsorshipAvailable: () => boolean;
     sponsoredVaultStatus: MultiChainVaultResult | null;
     isCreatingSponsoredVaults: boolean;
-    
+
     // Phase 2: Balances
     vaultBalances: PortfolioBalance | null;
     /** Balances per chain (keyed by Wormhole chain ID) */
@@ -136,7 +136,7 @@ interface VeridexContextType {
     refreshBalancesForChain: (wormholeChainId: number) => Promise<void>;
     getTokenBalance: (tokenAddress: string) => Promise<TokenBalance>;
     getTokenList: () => TokenInfo[];
-    
+
     // Phase 2: Transfers
     prepareTransfer: (params: TransferParams) => Promise<PreparedTransfer>;
     executeTransfer: (prepared: PreparedTransfer) => Promise<TransferResult>;
@@ -145,11 +145,11 @@ interface VeridexContextType {
     transferGasless: (params: TransferParams) => Promise<TransferResult>;
     /** Gasless bridge - uses relayer to pay gas fees for cross-chain transfers */
     bridgeGasless: (params: BridgeParams, onProgress?: (progress: CrossChainProgress) => void) => Promise<BridgeResult>;
-    
+
     // Phase 2: Receive
     receiveAddress: ReceiveAddress | null;
     getPaymentRequest: (amount: bigint, tokenAddress?: string, decimals?: number) => ReceiveAddress | null;
-    
+
     // Phase 2: Transaction Tracking
     pendingTransactions: TransactionState[];
     waitForTransaction: (hash: string) => Promise<TransactionState>;
@@ -209,7 +209,7 @@ interface VeridexContextType {
 
     // Issue #26: Human-Readable Transaction Summaries
     parseTransaction: (prepared: PreparedTransfer | PreparedBridge) => Promise<TransactionSummary>;
-    
+
     // Issue #27: Spending Limits
     spendingLimits: SpendingLimits | null;
     formattedSpendingLimits: FormattedSpendingLimits | null;
@@ -232,7 +232,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [vaultAddress, setVaultAddress] = useState<string | null>(null);
     const [vaultDeployed, setVaultDeployed] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    
+
     // Phase 2 state
     const [vaultBalances, setVaultBalances] = useState<PortfolioBalance | null>(null);
     const [chainBalances, setChainBalances] = useState<Record<number, PortfolioBalance | null>>({});
@@ -265,7 +265,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const [suiVaultExists, setSuiVaultExists] = useState<boolean>(false);
     const [aptosVaultExists, setAptosVaultExists] = useState<boolean>(false);
     const [starknetVaultExists, setStarknetVaultExists] = useState<boolean>(false);
-    
+
     // Non-EVM chain balances
     const [suiBalance, setSuiBalance] = useState<SuiBalance | null>(null);
     const [isLoadingSuiBalance, setIsLoadingSuiBalance] = useState<boolean>(false);
@@ -319,6 +319,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                         10004: config.rpcUrl, // Base Sepolia (hub)
                         10005: spokeConfigs.optimismSepolia.rpcUrl, // Optimism Sepolia
                         10003: spokeConfigs.arbitrumSepolia.rpcUrl, // Arbitrum Sepolia
+                        10002: spokeConfigs.ethereumSepolia.rpcUrl, // Ethereum Sepolia
                         1: solanaConfig.rpcUrl, // Solana Devnet
                     },
                 });
@@ -373,7 +374,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 if (savedCred) {
                     veridexSdk.setCredential(savedCred);
                     setCredential(savedCred);
-                    
+
                     // Load unified identity (includes vault address)
                     // Pass the locally-created clients since state hasn't been updated yet
                     await loadIdentity(veridexSdk, solClient, {
@@ -391,7 +392,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                         const relayerUrl = getRelayerUrl();
                         if (relayerUrl) {
                             const vaultPromises: Promise<void>[] = [];
-                            
+
                             // Check/create Solana vault
                             vaultPromises.push((async () => {
                                 try {
@@ -479,7 +480,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const loadIdentity = async (
-        sdkInstance: VeridexSDK, 
+        sdkInstance: VeridexSDK,
         solClient?: SolanaClient | null,
         clients?: {
             sui?: SuiClient | null;
@@ -491,7 +492,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         const suiC = clients?.sui ?? suiClient;
         const aptosC = clients?.aptos ?? aptosClient;
         const starknetC = clients?.starknet ?? starknetClient;
-        
+
         try {
             const unifiedIdentity = await sdkInstance.getUnifiedIdentity();
             setIdentity(unifiedIdentity);
@@ -499,7 +500,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Get the vault address from identity
             const currentChainAddress = unifiedIdentity.addresses.find(
                 a => a.wormholeChainId === config.wormholeChainId ||
-                     a.wormholeChainId === spokeConfigs.optimismSepolia.wormholeChainId
+                    a.wormholeChainId === spokeConfigs.optimismSepolia.wormholeChainId
             );
 
             if (currentChainAddress) {
@@ -532,7 +533,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     const solVaultAddr = clientToUse.computeVaultAddress(unifiedIdentity.keyHash);
                     setSolanaVaultAddress(solVaultAddr);
                     logger.log('Solana vault address:', solVaultAddr);
-                    
+
                     // Check if vault exists on-chain via relayer
                     try {
                         const vaultInfo = await clientToUse.getVaultViaRelayer(
@@ -557,7 +558,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     const suiVaultAddr = suiC.computeVaultAddress(unifiedIdentity.keyHash);
                     setSuiVaultAddress(suiVaultAddr);
                     logger.log('Sui vault address:', suiVaultAddr);
-                    
+
                     // Check if Sui vault exists via relayer
                     try {
                         const vaultInfo = await suiC.getVaultViaRelayer(
@@ -615,7 +616,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     const starknetVaultAddr = await starknetC.getVaultAddress(unifiedIdentity.keyHash);
                     setStarknetVaultAddress(starknetVaultAddr);
                     logger.log('Starknet vault address:', starknetVaultAddr);
-                    
+
                     // Check if Starknet vault exists via relayer
                     try {
                         const vaultInfo = await starknetC.getVaultViaRelayer(
@@ -783,7 +784,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
      */
     const refreshBalances = async () => {
         if (!sdk || !vaultAddress) return;
-        
+
         setIsLoadingBalances(true);
         try {
             const balances = await sdk.getVaultBalances(true);
@@ -806,17 +807,17 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
      */
     const refreshBalancesForChain = async (wormholeChainId: number) => {
         if (!sdk) return;
-        
+
         setIsLoadingBalances(true);
         try {
             // Use the new SDK method that properly computes per-chain vault addresses
             const balances = await sdk.getVaultBalancesForChain(wormholeChainId, true);
-            
+
             setChainBalances(prev => ({
                 ...prev,
                 [wormholeChainId]: balances,
             }));
-            
+
             // If this is the hub chain, also update vaultBalances for backward compatibility
             if (wormholeChainId === config.wormholeChainId) {
                 setVaultBalances(balances);
@@ -862,15 +863,15 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
      */
     const refreshSpendingLimits = useCallback(async () => {
         if (!sdk || !vaultAddress) return;
-        
+
         setIsLoadingSpendingLimits(true);
         try {
             const chainId = config.wormholeChainId;
             const limits = await sdk.spendingLimits.getSpendingLimits(vaultAddress, chainId);
             setSpendingLimits(limits);
-            
+
             const formatted = await sdk.spendingLimits.getFormattedSpendingLimits(
-                vaultAddress, 
+                vaultAddress,
                 chainId,
                 { decimals: 18, symbol: 'ETH' }
             );
@@ -887,7 +888,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
      */
     const checkTransactionLimit = useCallback(async (amount: bigint): Promise<LimitCheckResult | null> => {
         if (!sdk || !vaultAddress) return null;
-        
+
         const chainId = config.wormholeChainId;
         return await sdk.spendingLimits.checkTransactionLimit(vaultAddress, chainId, amount);
     }, [sdk, vaultAddress]);
@@ -1088,12 +1089,12 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         setIsLoadingAptosBalance(true);
         try {
             // Normalize address - ensure it has 0x prefix
-            const normalizedAddress = aptosVaultAddress.startsWith('0x') 
-                ? aptosVaultAddress 
+            const normalizedAddress = aptosVaultAddress.startsWith('0x')
+                ? aptosVaultAddress
                 : `0x${aptosVaultAddress}`;
-            
+
             // Determine base URL - Alchemy URLs need /v1/ appended, Aptoslabs already has it
-            const baseUrl = aptosConfig.rpcUrl.includes('alchemy.com') 
+            const baseUrl = aptosConfig.rpcUrl.includes('alchemy.com')
                 ? `${aptosConfig.rpcUrl}/v1`
                 : aptosConfig.rpcUrl;
 
@@ -1174,7 +1175,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Starknet RPC call to get STRK balance
             // STRK token contract on Sepolia
             const strkContractAddress = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
-            
+
             const response = await fetch(starknetConfig.rpcUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1235,8 +1236,8 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const getVaultAddressForChain = useCallback((wormholeChainId: number): string | null => {
         // For EVM chains, use SDK's method to compute the correct per-chain address
         if (sdk && identity?.keyHash) {
-            const isEvmChain = wormholeChainId === 10004 || wormholeChainId === 10005 || 
-                               wormholeChainId === 10003 || wormholeChainId === 40;
+            const isEvmChain = wormholeChainId === 10004 || wormholeChainId === 10005 ||
+                wormholeChainId === 10003 || wormholeChainId === 40;
             if (isEvmChain) {
                 try {
                     return sdk.getVaultAddressForChain(wormholeChainId, identity.keyHash);
@@ -1259,23 +1260,23 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 // Return vaultAddress as fallback (this may show wrong balances)
                 logger.warn(`SDK not available, returning hub vault address for chain ${wormholeChainId}`);
                 return vaultAddress;
-            
+
             // Solana
             case 1:
                 return solanaVaultAddress;
-            
+
             // Sui
             case 21:
                 return suiVaultAddress;
-            
+
             // Aptos
             case 22:
                 return aptosVaultAddress;
-            
+
             // Starknet
             case 50001:
                 return starknetVaultAddress;
-            
+
             default:
                 logger.warn(`Unknown chain ID: ${wormholeChainId}`);
                 return null;
@@ -1308,10 +1309,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 identity.keyHash,
                 config.relayerUrl
             );
-            
+
             // Update vault exists state
             setSolanaVaultExists(true);
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1332,10 +1333,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 identity.keyHash,
                 config.relayerUrl
             );
-            
+
             // Sui implicit accounts always exist
             setSuiVaultExists(true);
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1356,16 +1357,16 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 identity.keyHash,
                 config.relayerUrl
             );
-            
+
             // Set the vault address from the result (works for both new and existing vaults)
             if (result.address) {
                 setAptosVaultAddress(result.address);
                 logger.log('Aptos vault address:', result.address, result.alreadyExisted ? '(already existed)' : '(newly created)');
             }
-            
+
             // Update vault exists state
             setAptosVaultExists(true);
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1386,14 +1387,14 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 identity.keyHash,
                 config.relayerUrl
             );
-            
+
             // Set the vault address from the result
             if (result.address) {
                 setStarknetVaultAddress(result.address);
                 logger.log('Starknet vault created:', result.address);
             }
             setStarknetVaultExists(true);
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1419,17 +1420,17 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const executeTransfer = async (prepared: PreparedTransfer): Promise<TransferResult> => {
         if (!sdk) throw new Error('SDK not initialized');
         if (!signer) throw new Error('Wallet not connected');
-        
+
         setIsLoading(true);
         try {
             const result = await sdk.executeTransfer(prepared, signer);
-            
+
             // Update pending transactions
             updatePendingTransactions();
-            
+
             // Refresh balances after transfer
             await refreshBalances();
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1439,16 +1440,16 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     const transfer = async (params: TransferParams): Promise<TransferResult> => {
         if (!sdk) throw new Error('SDK not initialized');
         if (!signer) throw new Error('Wallet not connected');
-        
+
         setIsLoading(true);
         try {
             const result = await sdk.transferWithTracking(params, signer, (state) => {
                 updatePendingTransactions();
             });
-            
+
             // Refresh balances after transfer
             await refreshBalances();
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1464,7 +1465,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
      */
     const transferGasless = async (params: TransferParams): Promise<TransferResult> => {
         if (!sdk) throw new Error('SDK not initialized');
-        
+
         setIsLoading(true);
         try {
             logger.log('[Veridex] Starting gasless transfer:', params);
@@ -1472,10 +1473,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 updatePendingTransactions();
             });
             logger.log('[Veridex] Gasless transfer successful:', result);
-            
+
             // Refresh balances after transfer
             await refreshBalances();
-            
+
             return result;
         } catch (err: any) {
             logger.error('[Veridex] Gasless transfer failed:', err?.message || err);
@@ -1496,7 +1497,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         onProgress?: (progress: CrossChainProgress) => void
     ): Promise<BridgeResult> => {
         if (!sdk) throw new Error('SDK not initialized');
-        
+
         setIsLoading(true);
         try {
             logger.log('[Veridex] Starting gasless bridge:', params);
@@ -1506,10 +1507,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 updatePendingBridges();
             });
             logger.log('[Veridex] Gasless bridge successful:', result);
-            
+
             // Refresh balances after bridge
             await refreshBalances();
-            
+
             return result;
         } catch (err: any) {
             logger.error('[Veridex] Gasless bridge failed:', err?.message || err);
@@ -1536,8 +1537,8 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     // ========================================================================
 
     const getPaymentRequest = (
-        amount: bigint, 
-        tokenAddress: string = 'native', 
+        amount: bigint,
+        tokenAddress: string = 'native',
         decimals: number = 18
     ): ReceiveAddress | null => {
         if (!sdk) return null;
@@ -1554,7 +1555,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
     };
 
     const executeBridge = async (
-        prepared: PreparedBridge, 
+        prepared: PreparedBridge,
         onProgress?: (progress: CrossChainProgress) => void
     ): Promise<BridgeResult> => {
         if (!sdk) throw new Error('SDK not initialized');
@@ -1679,7 +1680,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                     const vaultResult = await sdk.ensureSponsoredVaultsOnAllChains();
                     setSponsoredVaultStatus(vaultResult);
                     logger.log('Sponsored vaults created:', vaultResult);
-                    
+
                     // Refresh identity to update vault deployment status
                     await loadIdentity(sdk);
                 } catch (vaultError) {
@@ -1708,13 +1709,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
             // Use discoverable credential authentication
             // This will show all available passkeys for this site
             const { credential: cred } = await sdk.passkey.authenticate();
-            
+
             sdk.setCredential(cred);
             setCredential(cred);
-            
+
             // Save to localStorage in case it wasn't saved before
             sdk.passkey.saveToLocalStorage();
-            
+
             // Load identity
             await loadIdentity(sdk);
 
@@ -1725,7 +1726,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 try {
                     // ensureSponsoredVaultsOnAllChains only creates vaults where they don't exist
                     const vaultResult = await sdk.ensureSponsoredVaultsOnAllChains();
-                    
+
                     // Only show status if any vaults were created (not just already existing)
                     const newlyCreated = vaultResult.results.filter(r => r.success && !r.alreadyExists);
                     if (newlyCreated.length > 0) {
@@ -1761,10 +1762,10 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         try {
             const result = await sdk.createVault(signer);
-            
+
             // Refresh identity to update vault status
             await loadIdentity(sdk);
-            
+
             return result;
         } finally {
             setIsLoading(false);
@@ -1951,7 +1952,7 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 vaultAddress,
                 vaultDeployed,
                 isLoading,
-                
+
                 // Phase 1
                 register,
                 login,
@@ -1962,13 +1963,13 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 hasStoredCredential,
                 createVault,
                 refreshIdentity,
-                
+
                 // Sponsored Vault Creation (Gasless)
                 createSponsoredVaults,
                 isSponsorshipAvailable,
                 sponsoredVaultStatus,
                 isCreatingSponsoredVaults,
-                
+
                 // Phase 2: Balances
                 vaultBalances,
                 chainBalances,
@@ -1977,18 +1978,18 @@ export function VeridexProvider({ children }: { children: ReactNode }) {
                 refreshBalancesForChain,
                 getTokenBalance,
                 getTokenList,
-                
+
                 // Phase 2: Transfers
                 prepareTransfer,
                 executeTransfer,
                 transfer,
                 transferGasless,
                 bridgeGasless,
-                
+
                 // Phase 2: Receive
                 receiveAddress,
                 getPaymentRequest,
-                
+
                 // Phase 2: Tracking
                 pendingTransactions,
                 waitForTransaction,
