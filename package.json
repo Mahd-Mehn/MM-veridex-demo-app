@@ -11,7 +11,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
-    "@veridex/sdk": "^1.0.0-beta.13",
+    "@veridex/sdk": "^1.0.0-beta.14",
     "ethers": "^6.16.0",
     "html2canvas": "^1.4.1",
     "next": "16.0.10",

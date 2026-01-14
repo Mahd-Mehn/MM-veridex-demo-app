@@ -36,6 +36,7 @@ function getRpcUrls(): Partial<Record<ChainName, string>> {
         base: process.env.NEXT_PUBLIC_BASE_RPC_URL,
         optimism: process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL,
         arbitrum: process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
+        ethereum: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC_URL,
         starknet: process.env.NEXT_PUBLIC_STARKNET_RPC_URL,
         sui: process.env.NEXT_PUBLIC_SUI_RPC_URL,
         aptos: process.env.NEXT_PUBLIC_APTOS_RPC_URL,
@@ -122,6 +123,11 @@ export const optimismSdk = createChainSDK('optimism');
 export const arbitrumSdk = createChainSDK('arbitrum');
 
 /**
+ * Ethereum testnet SDK (Sepolia)
+ */
+export const ethereumSdk = createChainSDK('ethereum');
+
+/**
  * Starknet testnet SDK
  */
 export const starknetSdk = createChainSDK('starknet');
@@ -142,6 +148,7 @@ export const SUPPORTED_CHAINS = [
     'base',
     'optimism',
     'arbitrum',
+    'ethereum',
     'starknet',
     'solana',
     'sui',
