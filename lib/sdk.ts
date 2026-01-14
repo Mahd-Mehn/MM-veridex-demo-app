@@ -175,3 +175,28 @@ export {
     getHubChains,
     isChainSupported,
 } from '@veridex/sdk';
+
+// ============================================================================
+// Cross-Origin Passkey Authentication
+// ============================================================================
+
+/**
+ * Cross-origin passkey authentication for third-party apps.
+ * Uses WebAuthn Related Origin Requests (Chrome 128+, Safari 18+) 
+ * with Auth Portal fallback for older browsers.
+ */
+export {
+    CrossOriginAuth,
+    createCrossOriginAuth,
+    sendAuthResponse,
+    sendAuthError,
+    VERIDEX_RP_ID,
+    DEFAULT_AUTH_PORTAL_URL,
+    AUTH_MESSAGE_TYPES,
+} from '@veridex/sdk';
+
+export type {
+    CrossOriginAuthConfig,
+    CrossOriginSession,
+    AuthPortalMessage,
+} from '@veridex/sdk';
