@@ -1,0 +1,10 @@
+{
+  "origins": [
+    "https://sera.veridex.network",
+    "https://app.veridex.network",
+    "https://demo.veridex.network",
+    "https://test.veridex.network",
+    "https://staging.veridex.network",
+    "https://veridex.network"
+  ]
+}
