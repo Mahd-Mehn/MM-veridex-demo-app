@@ -1,10 +1,14 @@
 {
   "origins": [
+    "https://veridex.network",
+    "https://auth.veridex.network",
     "https://sera.veridex.network",
     "https://app.veridex.network",
     "https://demo.veridex.network",
     "https://test.veridex.network",
     "https://staging.veridex.network",
-    "https://veridex.network"
+    "https://developers.veridex.network",
+    "https://mm-veridex-demo-app.vercel.app",
+    "https://settla-merchant-layer.vercel.app"
   ]
 }
