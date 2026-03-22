@@ -23,13 +23,13 @@ export const config = {
     chainId: 84532,
     wormholeChainId: 10004,
     rpcUrl: RPC_URLS.baseSepolia,
-    hubContract: '0x66D87dE68327f48A099c5B9bE97020Feab9a7c82',
+    hubContract: '0x23a39c294891703146c3607e1FEEB5Fe78F7F28d',
     wormholeCoreBridge: '0x79A1027a6A159502049F10906D333EC57E95F083',
     wormholeTokenBridge: '0x86F55A04690fd7815A3D802bD587e83eA888B239',
     chainName: 'Base Sepolia',
     explorerUrl: 'https://sepolia.basescan.org',
     // Factory deployed on Base Sepolia for local vault creation
-    vaultFactory: '0xCFaEb5652aa2Ee60b2229dC8895B4159749C7e53',
+    vaultFactory: '0x31e8dc9428575334739754Ab2bdB0E8b9Dc707FD',
     vaultImplementation: '0x0d13367C16c6f0B24eD275CC67C7D9f42878285c',
     // Relayer URL - production uses proxy, dev uses direct URL
     relayerUrl,
@@ -45,8 +45,8 @@ export const spokeConfigs = {
         wormholeTokenBridge: '0x99737Ec4B815d816c49A385943baf0380e75c0Ac',
         chainName: 'Optimism Sepolia',
         explorerUrl: 'https://sepolia-optimism.etherscan.io',
-        vaultFactory: '0xA5653d54079ABeCe780F8d9597B2bc4B09fe464A',
-        vaultImplementation: '0x8099b1406485d2255ff89Ce5Ea18520802AFC150',
+        vaultFactory: '0x347feeaBB5655a7a80b56D8D554DA30BE6c28225',
+        vaultImplementation: '0x26C4FD8fC66150ef5964562F7A69271fB0cd02A4',
     },
     arbitrumSepolia: {
         chainId: 421614,
@@ -56,8 +56,8 @@ export const spokeConfigs = {
         wormholeTokenBridge: '0xC7A204bDBFe983FCD8d8E61D02b475D4073fF97e',
         chainName: 'Arbitrum Sepolia',
         explorerUrl: 'https://sepolia.arbiscan.io',
-        vaultFactory: '0xd36D3D5DB59d78f1E33813490F72DABC15C9B07c',
-        vaultImplementation: '0xB10ACf39eBF17fc33F722cBD955b7aeCB0611bc4',
+        vaultFactory: '0x708eEE22621A64CDF51d98d3e8D97902D7dF52dD',
+        vaultImplementation: '0x9f74Dc14A98E59df7AEC5571a2B9E329153dF5Cd',
     },
     ethereumSepolia: {
         chainId: 11155111,
@@ -67,8 +67,8 @@ export const spokeConfigs = {
         wormholeTokenBridge: '0xDB5492265f6038831E89f495670FF909aDe94bd9',
         chainName: 'Ethereum Sepolia',
         explorerUrl: 'https://sepolia.etherscan.io',
-        vaultFactory: '0x07F608AFf6d63b68029488b726d895c4Bb593038',
-        vaultImplementation: '0xD66153fccFB6731fB6c4944FbD607ba86A76a1f6',
+        vaultFactory: '0x52a6dc19C11b3B53B434Fc7f6D31F8b62ed18F0a',
+        vaultImplementation: '0xfab72dd1fd3AD79f738B49506f32251B60c95f01',
     },
 };
 
