@@ -40,7 +40,7 @@ import { logger } from '@/lib/logger';
 // Relayer URL configuration
 // - Production: Uses /api/relayer proxy to hide backend URL from browser
 // - Development: Uses direct URL to avoid IPv6/network issues locally
-const RELAYER_DIRECT_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app/api/v1';
+const RELAYER_DIRECT_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://relayer.veridex.network/api/v1';
 const RELAYER_PROXY_URL = '/api/relayer';
 const getRelayerUrl = () => process.env.NODE_ENV === 'production' ? RELAYER_PROXY_URL : RELAYER_DIRECT_URL;
 

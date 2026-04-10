@@ -3,7 +3,7 @@
 // Relayer URL handling:
 // - Production: Use /api/relayer proxy to hide backend URL from browser
 // - Development: Use direct URL (proxy may have IPv6 issues locally)
-const RELAYER_DIRECT_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app/api/v1';
+const RELAYER_DIRECT_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://relayer.veridex.network/api/v1';
 const RELAYER_PROXY_URL = '/api/relayer';
 const relayerUrl = process.env.NODE_ENV === 'production' ? RELAYER_PROXY_URL : RELAYER_DIRECT_URL;
 

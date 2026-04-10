@@ -50,7 +50,7 @@ function getRpcUrls(): Partial<Record<ChainName, string>> {
  * - Development: Uses direct URL (avoids IPv6/network issues locally)
  */
 function getRelayerConfig(): Pick<SimpleSDKConfig, 'relayerUrl' | 'relayerApiKey'> {
-    const directUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app/api/v1';
+    const directUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://relayer.veridex.network/api/v1';
     const proxyUrl = '/api/relayer';
     
     return {

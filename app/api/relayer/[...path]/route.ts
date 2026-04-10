@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Get relayer URL from server-side env (not exposed to client)
-const RELAYER_URL = process.env.RELAYER_BACKEND_URL || process.env.NEXT_PUBLIC_RELAYER_URL || 'https://amused-kameko-veridex-demo-37453117.koyeb.app';
+const RELAYER_URL = process.env.RELAYER_BACKEND_URL || process.env.NEXT_PUBLIC_RELAYER_URL || 'https://relayer.veridex.network';
 
 // Headers to forward from client request
 const FORWARDED_HEADERS = ['content-type', 'accept', 'x-api-key', 'authorization'];
