@@ -13,9 +13,9 @@ const RPC_URLS = {
     optimismSepolia: process.env.NEXT_PUBLIC_OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
     arbitrumSepolia: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
     ethereumSepolia: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
-    starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/YOUR_ALCHEMY_KEY_HERE',
+    starknetSepolia: process.env.NEXT_PUBLIC_STARKNET_SEPOLIA_RPC_URL || 'https://starknet-sepolia-rpc.publicnode.com',
     suiTestnet: process.env.NEXT_PUBLIC_SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
-    aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://aptos-testnet.g.alchemy.com/v2/YOUR_ALCHEMY_KEY_HERE',
+    aptosTestnet: process.env.NEXT_PUBLIC_APTOS_RPC_URL || 'https://fullnode.testnet.aptoslabs.com/v1',
 };
 
 // Base Sepolia (Hub Chain) - Now also has factory for vault creation
